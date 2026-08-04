@@ -181,6 +181,7 @@
       <p>Monthly mutual fund entries — one place, no broken formulas.</p>
     </div>
     <div style="display:flex;align-items:center;gap:16px;">
+      <button type="button" id="aboutBtn" class="link-btn" style="white-space:nowrap;">ⓘ What can I do here?</button>
       <button type="button" id="themeToggleBtn" class="secondary" style="white-space:nowrap;">☾ Dark mode</button>
       <div class="seal" id="seal">
         <div class="seal-label">XIRR</div>
@@ -188,6 +189,21 @@
       </div>
     </div>
   </header>
+
+  <section class="panel" id="onboardingBanner" style="display:none;border-left:3px solid var(--gold);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+      <div>
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-bottom:10px;color:var(--ink);">What you can do here</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--ink-soft);line-height:1.8;">
+          <li>Log SIP or lump-sum entries by hand, or <strong style="color:var(--ink);">upload a CAMS/KFintech consolidated statement</strong> — or a single AMC's PDF, CSV, or Excel file — to import your history automatically</li>
+          <li><strong style="color:var(--ink);">XIRR, absolute returns, and rolling returns</strong> (3M/1Y/3Y/5Y/10Y) are calculated from your actual transactions, not estimates</li>
+          <li>Use the <strong style="color:var(--ink);">Goal planner</strong> to see when you'll reach a target corpus, including step-up SIPs and contribution end dates — mutual funds or other assets like gold and PPF</li>
+          <li>Everything stays on this device — nothing is sent to any server except anonymous fund NAV lookups</li>
+        </ul>
+      </div>
+      <button type="button" id="dismissOnboardingBtn" class="secondary" style="padding:4px 11px;font-size:16px;line-height:1;flex-shrink:0;">×</button>
+    </div>
+  </section>
 
   <section class="summary-grid">
     <div class="card"><div class="label">Invested</div><div class="value num" id="sumInvested">₹0</div></div>
@@ -482,6 +498,21 @@
     const isDark = document.documentElement.getAttribute('data-theme')==='dark';
     setTheme(isDark ? 'light' : 'dark');
   });
+
+  // ---------- Onboarding banner ----------
+  (function initOnboarding(){
+    let dismissed = false;
+    try{ dismissed = localStorage.getItem('mf_onboarding_dismissed') === 'true'; }catch(e){}
+    if(!dismissed) $('onboardingBanner').style.display = 'block';
+    $('dismissOnboardingBtn').addEventListener('click', ()=>{
+      $('onboardingBanner').style.display = 'none';
+      try{ localStorage.setItem('mf_onboarding_dismissed', 'true'); }catch(e){}
+    });
+    $('aboutBtn').addEventListener('click', ()=>{
+      $('onboardingBanner').style.display = 'block';
+      $('onboardingBanner').scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  })();
 
   // ---------- Persistence ----------
   // Uses localStorage, which is saved on this computer, in this browser, tied to
