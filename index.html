@@ -28,13 +28,30 @@
     --rust-bg: #F3E4E1;
     --line: #CBC4AF;
     --line-soft: #DFDACB;
+    --ledger-line: rgba(22,35,61,0.028);
     --radius: 3px;
+  }
+  [data-theme="dark"]{
+    --paper: #191C24;
+    --paper-deep: #21252F;
+    --card: #20242E;
+    --ink: #EBE7DC;
+    --ink-soft: #9B96A3;
+    --gold: #D8AE4A;
+    --gold-ink: #E8C46B;
+    --green: #55B98A;
+    --green-bg: #1D3129;
+    --rust: #E07D68;
+    --rust-bg: #3A241F;
+    --line: #383C48;
+    --line-soft: #2A2E38;
+    --ledger-line: rgba(235,231,220,0.035);
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     background:
-      repeating-linear-gradient(180deg, rgba(22,35,61,0.028) 0px, rgba(22,35,61,0.028) 1px, transparent 1px, transparent 29px),
+      repeating-linear-gradient(180deg, var(--ledger-line) 0px, var(--ledger-line) 1px, transparent 1px, transparent 29px),
       var(--paper);
     color:var(--ink);
     font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -96,7 +113,7 @@
   input,select,textarea{
     font-family:'Inter',sans-serif;font-size:13px;
     border:1px solid var(--line);border-radius:var(--radius);
-    padding:8px 9px;background:#fff;color:var(--ink);
+    padding:8px 9px;background:var(--card);color:var(--ink);
   }
   input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
   input.num-input{font-family:'IBM Plex Mono',monospace;}
@@ -105,7 +122,7 @@
     border:1px solid var(--ink);background:var(--ink);color:var(--paper);
     padding:9px 16px;border-radius:var(--radius);cursor:pointer;
   }
-  button:hover{background:#233252;}
+  button:hover{filter:brightness(1.15);}
   button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);}
   button.secondary:hover{background:var(--paper-deep);}
   button.link-btn{background:none;border:none;color:var(--gold-ink);font-weight:500;padding:4px 6px;text-decoration:underline;cursor:pointer;font-size:12px;}
@@ -136,7 +153,7 @@
   /* Search results dropdown */
   .search-wrap{position:relative;}
   .search-results{
-    position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);
+    position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--line);
     border-top:none;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 14px rgba(22,35,61,0.12);
   }
   .search-results div{padding:8px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--line-soft);}
@@ -163,9 +180,12 @@
       <h1>Fund Ledger</h1>
       <p>Monthly mutual fund entries — one place, no broken formulas.</p>
     </div>
-    <div class="seal" id="seal">
-      <div class="seal-label">XIRR</div>
-      <div class="seal-val" id="sealVal">—</div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <button type="button" id="themeToggleBtn" class="secondary" style="white-space:nowrap;">☾ Dark mode</button>
+      <div class="seal" id="seal">
+        <div class="seal-label">XIRR</div>
+        <div class="seal-val" id="sealVal">—</div>
+      </div>
     </div>
   </header>
 
@@ -426,6 +446,43 @@
     clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove('show'), 2600);
   }
 
+  function cssVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function hexToRgb(hex){
+    const h = hex.replace('#','');
+    const n = h.length===3 ? h.split('').map(c=>c+c).join('') : h;
+    const r = parseInt(n.slice(0,2),16), g = parseInt(n.slice(2,4),16), b = parseInt(n.slice(4,6),16);
+    return `${r},${g},${b}`;
+  }
+
+  // ---------- Theme ----------
+  function applyTheme(theme){
+    if(theme==='dark') document.documentElement.setAttribute('data-theme','dark');
+    else document.documentElement.removeAttribute('data-theme');
+    const btn = $('themeToggleBtn');
+    if(btn) btn.textContent = theme==='dark' ? '☀ Light mode' : '☾ Dark mode';
+  }
+  function setTheme(theme){
+    try{ localStorage.setItem('mf_theme', theme); }catch(e){}
+    applyTheme(theme);
+    // Chart.js bakes colors in at creation time, so re-render to pick up the new palette.
+    renderChart();
+    if($('goalChartBox').style.display !== 'none' && $('goalTarget').value) $('calcGoalBtn').click();
+  }
+  function getInitialTheme(){
+    try{
+      const saved = localStorage.getItem('mf_theme');
+      if(saved==='dark' || saved==='light') return saved;
+    }catch(e){}
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  applyTheme(getInitialTheme());
+  $('themeToggleBtn').addEventListener('click', ()=>{
+    const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+    setTheme(isDark ? 'light' : 'dark');
+  });
+
   // ---------- Persistence ----------
   // Uses localStorage, which is saved on this computer, in this browser, tied to
   // this file. Opening the file again in the same browser reloads everything.
@@ -571,7 +628,8 @@
       tr.innerHTML = `
         <td class="fund-name">${escapeHtml(f.name)}</td>
         <td class="fund-code">
-          <input type="text" value="${escapeHtml(f.code||'')}" data-code-fund="${f.id}" style="width:120px;font-size:11px;padding:4px 6px;">
+          <input type="text" value="${escapeHtml(f.code||'')}" data-code-fund="${f.id}" style="width:120px;font-size:11px;padding:4px 6px;" placeholder="AMFI code">
+          ${f.isin ? `<div style="margin-top:3px;font-size:10px;color:var(--ink-soft);">ISIN ${escapeHtml(f.isin)}</div>` : ''}
         </td>
         <td class="right num">${fmtMoney(s.invested)}</td>
         <td class="right num">${fmtNum(s.units,3)}</td>
@@ -638,18 +696,19 @@
     const current = funds.map(f=>fundStats(f).current);
     if(chart) chart.destroy();
     if(!funds.length){ return; }
+    const tickColor = cssVar('--ink-soft');
     chart = new Chart(ctx, {
       type:'bar',
       data:{ labels, datasets:[
-        {label:'Invested', data:invested, backgroundColor:'#CBC4AF'},
-        {label:'Current value', data:current, backgroundColor:'#2F6F4F'}
+        {label:'Invested', data:invested, backgroundColor:cssVar('--line')},
+        {label:'Current value', data:current, backgroundColor:cssVar('--green')}
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom', labels:{font:{family:'Inter'}, boxWidth:12}}},
+        plugins:{legend:{position:'bottom', labels:{font:{family:'Inter'}, boxWidth:12, color:tickColor}}},
         scales:{
-          y:{ticks:{callback:v=>'₹'+v.toLocaleString('en-IN')}, grid:{color:'#DFDACB'}},
-          x:{grid:{display:false}}
+          y:{ticks:{callback:v=>'₹'+v.toLocaleString('en-IN'), color:tickColor}, grid:{color:cssVar('--line-soft')}},
+          x:{ticks:{color:tickColor}, grid:{display:false}}
         }
       }
     });
@@ -825,7 +884,7 @@
     const target = parseFloat($('goalTarget').value);
     const resultEl = $('goalResult');
     if(!target || target<=0){ resultEl.innerHTML = '<p class="hint warn">Enter a target corpus first.</p>'; return; }
-    if(!funds.length){ resultEl.innerHTML = '<p class="hint warn">Add at least one fund first.</p>'; return; }
+    if(!funds.length && !customAssets.length){ resultEl.innerHTML = '<p class="hint warn">Add at least one investment first — a fund above, or an entry under "Other investments" below.</p>'; return; }
 
     const zeroRateFunds = funds.filter(f=>{
       const s = fundStats(f);
@@ -866,16 +925,18 @@
       labels.push(`+${sim.series.length-1}mo`); data.push(sim.series[sim.series.length-1]);
     }
     if(goalChart) goalChart.destroy();
+    const tickColor = cssVar('--ink-soft');
+    const greenRgb = hexToRgb(cssVar('--green'));
     goalChart = new Chart($('goalChart'), {
       type:'line',
       data:{ labels, datasets:[
-        {label:'Projected corpus', data, borderColor:'#2F6F4F', backgroundColor:'rgba(47,111,79,0.1)', fill:true, tension:0.25, pointRadius:0},
-        {label:'Target', data:labels.map(()=>target), borderColor:'#B98A1E', borderDash:[6,4], pointRadius:0}
+        {label:'Projected corpus', data, borderColor:cssVar('--green'), backgroundColor:`rgba(${greenRgb},0.15)`, fill:true, tension:0.25, pointRadius:0},
+        {label:'Target', data:labels.map(()=>target), borderColor:cssVar('--gold'), borderDash:[6,4], pointRadius:0}
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom', labels:{font:{family:'Inter'}, boxWidth:12}}},
-        scales:{ y:{ticks:{callback:v=>'₹'+v.toLocaleString('en-IN')}, grid:{color:'#DFDACB'}}, x:{grid:{display:false}} }
+        plugins:{legend:{position:'bottom', labels:{font:{family:'Inter'}, boxWidth:12, color:tickColor}}},
+        scales:{ y:{ticks:{callback:v=>'₹'+v.toLocaleString('en-IN'), color:tickColor}, grid:{color:cssVar('--line-soft')}}, x:{ticks:{color:tickColor}, grid:{display:false}} }
       }
     });
   });
@@ -903,14 +964,15 @@
   }
 
   // ---------- Fund lookup / creation ----------
-  function findOrCreateFund(name, code){
+  function findOrCreateFund(name, code, isin){
     name = name.trim();
     let f = funds.find(x=> normalizeFundCore(x.name) === normalizeFundCore(name));
     if(f){
       if(code && !f.code) f.code = code; // keep the fund's existing stored name — don't overwrite with a variant spelling
+      if(isin && !f.isin) f.isin = isin;
       return f;
     }
-    f = {id:uid(), name, code: code||'', latestNav:0, latestNavDate:null};
+    f = {id:uid(), name, code: code||'', isin: isin||'', latestNav:0, latestNavDate:null};
     funds.push(f);
     return f;
   }
@@ -934,6 +996,42 @@
     }catch(e){
       return null;
     }
+  }
+  async function fetchSchemeDetail(code){
+    try{
+      const res = await fetch('https://api.mfapi.in/mf/' + encodeURIComponent(code));
+      if(!res.ok) throw new Error('bad response');
+      return await res.json(); // { meta: {isin_growth, isin_div_reinvestment, ...}, data: [...] }
+    }catch(e){
+      return null;
+    }
+  }
+  // Tries to find the correct AMFI scheme code for a fund automatically, so the
+  // person never has to search and type it in themselves.
+  // 1. If the fund has a stored ISIN (from a statement import), search by name,
+  //    then confirm the match by comparing each candidate's ISIN — confident,
+  //    no guessing.
+  // 2. Without an ISIN, only auto-pick when the name search returns exactly
+  //    one candidate; anything more ambiguous is left for the picker UI.
+  async function autoResolveSchemeCode(fund){
+    const results = await searchSchemes(fund.name);
+    if(!results || !results.length) return {candidates: results||[]};
+    const candidates = results.slice(0, 8);
+    if(fund.isin){
+      for(const c of candidates){
+        const detail = await fetchSchemeDetail(c.schemeCode);
+        if(!detail || !detail.meta) continue;
+        if(detail.meta.isin_growth === fund.isin || detail.meta.isin_div_reinvestment === fund.isin){
+          return {code:String(c.schemeCode), history:detail.data, candidates};
+        }
+      }
+      return {candidates}; // no confident ISIN match — let the caller fall back
+    }
+    if(candidates.length === 1){
+      const detail = await fetchSchemeDetail(candidates[0].schemeCode);
+      if(detail) return {code:String(candidates[0].schemeCode), history:detail.data, candidates};
+    }
+    return {candidates};
   }
   function navOnOrBefore(history, isoDate){
     if(!history) return null;
@@ -1032,11 +1130,54 @@
   $('fundsTbody').addEventListener('click', async (e)=>{
     const refreshId = e.target.getAttribute('data-refresh-fund');
     const delId = e.target.getAttribute('data-del-fund');
+    const pickCode = e.target.getAttribute('data-pick-code');
+    const pickFund = e.target.getAttribute('data-pick-fund');
+
+    if(pickCode && pickFund){
+      const f = funds.find(x=>x.id===pickFund);
+      e.target.closest('tr').querySelectorAll('button').forEach(b=>b.disabled=true);
+      const detail = await fetchSchemeDetail(pickCode);
+      if(detail && detail.data && detail.data.length){
+        f.code = pickCode;
+        f.latestNav = parseFloat(detail.data[0].nav);
+        f.latestNavDate = detail.data[0].date;
+        f.rolling = computeRollingReturns(detail.data);
+        await save(); renderAll();
+        toast(`${f.name}: linked to code ${pickCode}, NAV updated to ₹${f.latestNav}`);
+      }else{
+        toast('Could not reach NAV service — try again shortly');
+      }
+      return;
+    }
+
     if(refreshId){
       const f = funds.find(x=>x.id===refreshId);
-      if(!f.code){ toast('No scheme code set for this fund'); return; }
-      e.target.textContent = '…';
-      const history = await fetchNavHistory(f.code);
+      e.target.textContent = '…'; e.target.disabled = true;
+      let history;
+      if(!f.code){
+        const resolved = await autoResolveSchemeCode(f);
+        if(resolved.code){
+          f.code = resolved.code;
+          history = resolved.history;
+          toast(`Found scheme code ${resolved.code} for ${f.name}`);
+        } else if(resolved.candidates && resolved.candidates.length){
+          // Ambiguous — offer a one-click picker instead of asking the person
+          // to search and type a code in themselves.
+          const row = e.target.closest('tr');
+          const cell = row.querySelector('.row-actions');
+          const list = resolved.candidates.slice(0,6).map(c=>
+            `<button type="button" class="link-btn" style="display:block;text-align:left;" data-pick-code="${c.schemeCode}" data-pick-fund="${f.id}">${escapeHtml(c.schemeName)}</button>`
+          ).join('');
+          cell.innerHTML = `<div style="max-width:260px;"><div class="hint" style="margin:0 0 4px;">Which one is this?</div>${list}</div>`;
+          return;
+        } else {
+          toast('Could not find this fund automatically — try searching for it once in "New entry" instead');
+          e.target.textContent = 'Refresh NAV'; e.target.disabled = false;
+          return;
+        }
+      } else {
+        history = await fetchNavHistory(f.code);
+      }
       if(history && history.length){
         f.latestNav = parseFloat(history[0].nav);
         f.latestNavDate = history[0].date;
@@ -1045,7 +1186,7 @@
         toast(`${f.name}: NAV updated to ₹${f.latestNav}`);
       }else{
         toast('Could not reach NAV service — try again or update manually via code field');
-        e.target.textContent = 'Refresh NAV';
+        e.target.textContent = 'Refresh NAV'; e.target.disabled = false;
       }
     }
     if(delId){
@@ -1090,6 +1231,7 @@
     const idx = {
       scheme: header.findIndex(h=>h==='scheme' || h.includes('scheme name')),
       code: header.findIndex(h=>h.includes('scheme code')),
+      isin: header.findIndex(h=>h==='isin' || h.includes('isin')),
       date: header.findIndex(h=>h.includes('transaction date')),
       amount: header.findIndex(h=>h==='amount'),
       nav: header.findIndex(h=>(h.includes('nav') && !h.includes('latest'))),
@@ -1119,9 +1261,10 @@
       if((!nav || nav<=0) && units>0 && amount>0) nav = amount/units;
       if((!units || units<=0) && nav>0 && amount>0) units = amount/nav;
       const code = idx.code>-1 ? String(row[idx.code]||'').trim() : '';
+      const isin = idx.isin>-1 ? String(row[idx.isin]||'').trim() : '';
       const latestNav = idx.latestNav>-1 ? parseFloat(String(row[idx.latestNav]).replace(/,/g,'')) : NaN;
       const txnType = idx.type>-1 ? String(row[idx.type]||'').trim() : '';
-      const entry = {rowNum, name, code, date, amount, nav, units, latestNav, checked:true};
+      const entry = {rowNum, name, code, isin, date, amount, nav, units, latestNav, checked:true};
 
       if(txnType && NON_PURCHASE_RE.test(txnType)){
         entry.status='skip'; entry.overridable=false; entry.reason=`"${txnType}" — redemptions/switches/dividends aren't supported yet`; entry.checked=false;
@@ -1200,7 +1343,7 @@
   });
 
   // ---------- File upload: CSV / Excel / PDF ----------
-  const STANDARD_HEADER = ['Scheme','Scheme Code','Transaction Date','Amount','Purchase NAV','# of Units','Latest NAV','Transaction Type'];
+  const STANDARD_HEADER = ['Scheme','Scheme Code','Transaction Date','Amount','Purchase NAV','# of Units','Latest NAV','Transaction Type','ISIN'];
 
   function parseCsvText(text){
     // Minimal CSV parser that handles quoted fields containing commas.
@@ -1230,6 +1373,13 @@
   // visual line (font baseline differences etc.), so relying on line boundaries
   // caused real transactions to be silently dropped. Scanning a flattened blob
   // instead is far more robust to how a given PDF happens to be laid out.
+  //
+  // Spacing between fragments is decided by the actual horizontal gap between
+  // them, not inserted unconditionally — some PDF generators split a single
+  // visual word (like an ISIN code, e.g. "INF204K01E54") into several adjacent
+  // text items with almost no gap between them. Always inserting a space would
+  // turn that into "INF 204 K 01 E 54", breaking the ISIN-based scheme
+  // detection below entirely.
   async function extractPdfText(arrayBuffer){
     if(typeof pdfjsLib === 'undefined') throw new Error('pdf-lib-unavailable');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1243,7 +1393,25 @@
         if(Math.abs(dy) > 3) return dy; // different visual line: top of page first
         return a.transform[4] - b.transform[4]; // same line: left to right
       });
-      fullText += ordered.map(it=>it.str).join(' ') + '\n';
+      let line = '';
+      let prevEndX = null, prevY = null;
+      ordered.forEach(it=>{
+        const y = it.transform[5], x = it.transform[4];
+        const fontSize = Math.abs(it.transform[3]) || 10;
+        if(prevY !== null && Math.abs(y - prevY) > 3){
+          fullText += line + '\n';
+          line = '';
+          prevEndX = null;
+        }
+        if(prevEndX !== null){
+          const gap = x - prevEndX;
+          if(gap > fontSize * 0.18) line += ' ';
+        }
+        line += it.str;
+        prevEndX = x + (it.width || it.str.length * fontSize * 0.5);
+        prevY = y;
+      });
+      fullText += line + '\n';
     }
     return fullText;
   }
@@ -1298,19 +1466,38 @@
     // format starting "IN") rather than requiring the literal word "ISIN" —
     // some AMCs label it explicitly ("... ISIN : INF204K01E54"), others just
     // append the code directly ("... Direct Plan Growth - INF879O01027").
-    const schemeRe = /([A-Za-z0-9][A-Za-z0-9 \/\-\.\(\)&,']{4,140}?)\s*[-\/:]?\s*\(?\s*(IN[A-Z0-9]{10})\)?/g;
+    //
+    // Most statements prefix the real fund name with a short internal code
+    // ("P8176-ICICI...", "RMFGFAGG-NIPPON...", "PP001 / Parag Parikh...") —
+    // anchoring on that prefix is important on dense documents (e.g. CAMS/
+    // KFintech consolidated statements covering many folios), where a looser
+    // lazy match would otherwise sweep in preceding folio numbers or the
+    // investor's own name as if they were part of the fund name. Some single-
+    // fund AMC statements have no such prefix at all, so that's the fallback.
+    const anchoredRe = /([A-Z0-9]{2,10}\s*[-\/]\s*[A-Za-z][A-Za-z0-9 \-\.\(\)&,']{2,138}?)\s*[-\/:]?\s*\(?\s*(IN[A-Z0-9]{10})\)?/g;
+    const looseRe = /([A-Za-z0-9][A-Za-z0-9 \/\-\.\(\)&,']{4,140}?)\s*[-\/:]?\s*\(?\s*(IN[A-Z0-9]{10})\)?/g;
+    let matches = [...flat.matchAll(anchoredRe)];
+    if(!matches.length) matches = [...flat.matchAll(looseRe)];
     const headers = [];
-    let hm;
-    while((hm = schemeRe.exec(flat))){
-      const name = hm[1].replace(/\bISIN\s*:?\s*$/i,'').replace(/\(NON-DEMAT\)|\(DEMAT\)/i,'').replace(/^[A-Z0-9]{2,8}\s*\/\s*/,'').trim();
-      headers.push({ name, start: hm.index + hm[0].length });
-    }
+    matches.forEach(hm=>{
+      const name = hm[1]
+        .replace(/\bISIN\s*:?\s*$/i,'')
+        .replace(/\(NON[- ]?DEMAT\)|\(DEMAT\)/i,'')
+        .replace(/\((?:formerly|erstwhile)[^)]*\)/gi,'')      // historical name notes, e.g. "(formerly Parag Parikh Long Term Value Fund)"
+        .replace(/^[A-Z0-9]{2,10}\s*[-\/]\s*/,'')              // internal AMC/RTA fund codes, e.g. "PP001 / " or "RMFGFAGG-"
+        .replace(/\(\s*[A-Z]{3,10}\s*\)\s*$/,'')                // trailing short code, e.g. "( GFAGG)" or "(GFAGG)"
+        .replace(/\s+/g,' ')
+        .replace(/^[\s\-,]+|[\s\-,]+$/g,'')                    // stray leading/trailing punctuation left after the above cleanups
+        .trim();
+      headers.push({ name, isin: hm[2], start: hm.index + hm[0].length });
+    });
     if(!headers.length) return rows2D;
     // Description is barred from crossing into another date — without this,
     // note-only lines that carry a date but no numbers (e.g. "***Invalid
     // Purchase...***") would swallow the NEXT real transaction's numbers and
     // misattribute them to the wrong (earlier) date.
-    const txnRe = /(\d{2}\/\d{2}\/\d{4})\s+((?:(?!\d{2}\/\d{2}\/\d{4}).)+?)\s+((?:[\d,]+\.\d+\s*){3,6})/g;
+    const DATE_PATTERN = '\\d{1,2}[-\\/](?:\\d{1,2}|[A-Za-z]{3,9})[-\\/]\\d{4}';
+    const txnRe = new RegExp(`(${DATE_PATTERN})\\s+((?:(?!${DATE_PATTERN}).)+?)\\s+((?:[\\d,]+\\.\\d+\\s*){3,6})`, 'g');
     headers.forEach((h, i)=>{
       const segEnd = (i+1 < headers.length) ? headers[i+1].start : flat.length;
       const segment = flat.slice(h.start, segEnd);
@@ -1325,7 +1512,7 @@
         if(/redeem|redempt/i.test(desc)) type='Redemption';
         else if(/switch/i.test(desc)) type='Switch';
         else if(/dividend|idcw/i.test(desc)) type='Dividend';
-        rows2D.push([h.name, '', date, String(roles.amount), String(roles.nav), String(roles.units), '', type]);
+        rows2D.push([h.name, '', date, String(roles.amount), String(roles.nav), String(roles.units), '', type, h.isin || '']);
       }
     });
     return rows2D;
@@ -1456,7 +1643,7 @@
     const toImport = pendingImport.filter(r=>r.checked);
     let added=0;
     toImport.forEach(r=>{
-      const fund = findOrCreateFund(r.name, /^\d+$/.test(r.code) ? r.code : '');
+      const fund = findOrCreateFund(r.name, /^\d+$/.test(r.code) ? r.code : '', r.isin || '');
       if(r.latestNav>0) fund.latestNav = r.latestNav;
       txns.push({id:uid(), fundId:fund.id, date:r.date, amount:r.amount, nav:r.nav, units:r.units});
       added++;
@@ -1509,10 +1696,10 @@
 
   // ---------- Export ----------
   $('exportBtn').addEventListener('click', ()=>{
-    const header = ['Scheme','Scheme Code','Transaction Date','Amount','Purchase NAV','# of Units','Latest NAV'];
+    const header = ['Scheme','Scheme Code','Transaction Date','Amount','Purchase NAV','# of Units','Latest NAV','ISIN'];
     const rows = txns.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{
       const f = funds.find(x=>x.id===t.fundId);
-      return [f?f.name:'', f?f.code:'', fmtDate(t.date), t.amount, t.nav, t.units, f?f.latestNav:''];
+      return [f?f.name:'', f?f.code:'', fmtDate(t.date), t.amount, t.nav, t.units, f?f.latestNav:'', f?f.isin:''];
     });
     const csv = [header, ...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], {type:'text/csv'});
