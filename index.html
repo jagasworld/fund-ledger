@@ -195,7 +195,7 @@
       <div>
         <div style="font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-bottom:10px;color:var(--ink);">What you can do here</div>
         <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--ink-soft);line-height:1.8;">
-          <li>Log SIP or lump-sum entries by hand, or <strong style="color:var(--ink);">upload a CAMS/KFintech consolidated statement</strong> — or a single AMC's PDF, CSV, or Excel file — to import your history automatically</li>
+          <li>Log SIP or lump-sum entries by hand, or <strong style="color:var(--ink);">upload a CAMS/KFintech consolidated statement</strong> to import your history automatically</li>
           <li><strong style="color:var(--ink);">XIRR, absolute returns, and rolling returns</strong> (3M/1Y/3Y/5Y/10Y) are calculated from your actual transactions, not estimates</li>
           <li>Use the <strong style="color:var(--ink);">Goal planner</strong> to see when you'll reach a target corpus, including step-up SIPs and contribution end dates — mutual funds or other assets like gold and PPF</li>
           <li>Everything stays on this device — nothing is sent to any server except anonymous fund NAV lookups</li>
@@ -279,6 +279,37 @@
       <div class="big">No rolling return data yet</div>
       Click "Refresh NAV" on a fund above (with a valid AMFI code) to pull its NAV history and compute this.
     </div>
+  </section>
+
+  <section class="panel">
+    <h2>Period investment &amp; returns <small>How much you actually put in over a window, and what it grew into</small></h2>
+    <div class="form-grid">
+      <div class="field">
+        <label for="periodFundSelect">Fund</label>
+        <select id="periodFundSelect"><option value="">All funds</option></select>
+      </div>
+      <div class="field">
+        <label for="periodWindowSelect">Period</label>
+        <select id="periodWindowSelect">
+          <option value="365">Last 1 year</option>
+          <option value="730">Last 2 years</option>
+          <option value="1095">Last 3 years</option>
+        </select>
+      </div>
+    </div>
+    <div id="periodResult" style="margin-top:16px;"></div>
+    <div class="table-scroll" id="periodBreakdownWrap" style="margin-top:14px;display:none;">
+      <table>
+        <thead><tr>
+          <th>Fund</th><th class="right">Invested</th><th class="right">Current value</th>
+          <th class="right">Absolute</th><th class="right">XIRR</th><th class="right">CAGR</th>
+        </tr></thead>
+        <tbody id="periodBreakdownTbody"></tbody>
+      </table>
+    </div>
+    <p class="hint" style="margin-top:12px;">
+      <strong style="color:var(--ink);">Absolute</strong> is straightforward growth over the window. <strong style="color:var(--ink);">XIRR</strong> accounts for exactly when each contribution landed (most accurate for irregular SIPs). <strong style="color:var(--ink);">CAGR</strong> annualizes strictly over the selected window length itself, for a simpler "if this were a steady rate" comparison.
+    </p>
   </section>
 
   <section class="panel">
@@ -972,8 +1003,89 @@
     });
   });
 
+  // ---------- Period investment & returns ----------
+  function renderPeriodFundSelect(){
+    const sel = $('periodFundSelect');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All funds</option>' + funds.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
+    sel.value = funds.some(f=>f.id===current) ? current : '';
+  }
+
+  // Computes invested / current value / returns using only transactions dated
+  // within the last `days`, optionally restricted to one fund. `latestNavOverride`
+  // lets the breakdown table reuse a fund's own latestNav without re-deriving it.
+  function computePeriodStats(days, fundId){
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffIso = cutoff.toISOString().slice(0,10);
+    const todayIso = new Date().toISOString().slice(0,10);
+    const relevant = txns.filter(t => t.date >= cutoffIso && (!fundId || t.fundId===fundId));
+    let invested = 0, current = 0;
+    const cashflows = [];
+    relevant.forEach(t=>{
+      const fund = funds.find(f=>f.id===t.fundId);
+      const latestNav = fund && fund.latestNav ? fund.latestNav : t.nav;
+      invested += t.amount;
+      current += t.units * latestNav;
+      cashflows.push({date:t.date, amount:-t.amount});
+    });
+    if(current>0) cashflows.push({date:todayIso, amount:current});
+    const absReturn = invested>0 ? (current-invested)/invested*100 : null;
+    // CAGR here annualizes strictly over the selected window (1/2/3 years),
+    // as a simpler complement to XIRR, which weights by each contribution's
+    // actual date instead.
+    const cagr = invested>0 ? (Math.pow(current/invested, 365/days)-1)*100 : null;
+    const xirrVal = invested>0 ? xirr(cashflows) : null;
+    return {invested, current, absReturn, cagr, xirr:xirrVal, count:relevant.length};
+  }
+
+  function renderPeriodReturns(){
+    const days = parseInt($('periodWindowSelect').value, 10);
+    const fundId = $('periodFundSelect').value || null;
+    const resultEl = $('periodResult');
+    const pct = (v) => v==null ? '—' : (v>=0?'+':'')+v.toFixed(2)+'%';
+    const cls = (v) => v==null ? '' : (v>=0?'pos':'neg');
+
+    const stats = computePeriodStats(days, fundId);
+    if(!stats.count){
+      resultEl.innerHTML = `<p class="hint warn">No transactions found in this window${fundId?' for this fund':''}.</p>`;
+      $('periodBreakdownWrap').style.display = 'none';
+      return;
+    }
+    resultEl.innerHTML = `
+      <div class="summary-grid">
+        <div class="card"><div class="label">Invested (this period)</div><div class="value num">${fmtMoney(stats.invested)}</div></div>
+        <div class="card"><div class="label">Current value</div><div class="value num">${fmtMoney(stats.current)}</div></div>
+        <div class="card"><div class="label">Absolute return</div><div class="value num ${cls(stats.absReturn)}">${pct(stats.absReturn)}</div></div>
+        <div class="card"><div class="label">XIRR</div><div class="value num ${cls(stats.xirr)}">${pct(stats.xirr)}</div></div>
+      </div>
+      <p class="hint" style="margin-top:10px;">CAGR (annualized over the window): <strong class="${cls(stats.cagr)}" style="font-family:'IBM Plex Mono',monospace;">${pct(stats.cagr)}</strong> · ${stats.count} transaction${stats.count===1?'':'s'} in this window</p>
+    `;
+
+    if(!fundId){
+      $('periodBreakdownWrap').style.display = 'block';
+      const tbody = $('periodBreakdownTbody');
+      tbody.innerHTML = funds.map(f=>{
+        const s = computePeriodStats(days, f.id);
+        if(!s.count) return '';
+        return `<tr>
+          <td class="fund-name">${escapeHtml(f.name)}</td>
+          <td class="right num">${fmtMoney(s.invested)}</td>
+          <td class="right num">${fmtMoney(s.current)}</td>
+          <td class="right num ${cls(s.absReturn)}">${pct(s.absReturn)}</td>
+          <td class="right num ${cls(s.xirr)}">${pct(s.xirr)}</td>
+          <td class="right num ${cls(s.cagr)}">${pct(s.cagr)}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      $('periodBreakdownWrap').style.display = 'none';
+    }
+  }
+  $('periodFundSelect').addEventListener('change', renderPeriodReturns);
+  $('periodWindowSelect').addEventListener('change', renderPeriodReturns);
+
   function renderAll(){
-    renderSummary(); renderFunds(); renderRolling(); renderGoalFunds(); renderAssets(); renderLedgerFilter(); renderLedger(); renderChart();
+    renderSummary(); renderFunds(); renderRolling(); renderGoalFunds(); renderAssets(); renderLedgerFilter(); renderLedger(); renderChart(); renderPeriodFundSelect(); renderPeriodReturns();
   }
 
   function escapeHtml(s){ const d=document.createElement('div'); d.textContent = s==null?'':s; return d.innerHTML; }
@@ -1467,6 +1579,7 @@
     const nums = numStrs.map(s=>parseFloat(String(s).replace(/,/g,'')));
     const decs = numStrs.map(decimalPlaces);
     let best = null;
+    const allValid = [];
     for(let i=0;i<nums.length;i++){
       for(let j=0;j<nums.length;j++){
         if(i===j) continue;
@@ -1480,14 +1593,35 @@
           if(err<=tol){
             const relErr = err/Math.max(derivedUnits,0.0001);
             const score = (decs[j]===4?3:0) + (decs[k]===3?3:0) + (decs[i]===2?1:0);
+            const cand = {amount, nav, units:nums[k], relErr, score};
+            allValid.push(cand);
             if(!best || score>best.score || (score===best.score && relErr<best.relErr)){
-              best = {amount, nav, units:nums[k], relErr, score};
+              best = cand;
             }
           }
         }
       }
     }
+    if(!best) return null;
+    // Amount = NAV × Units is symmetric — a=n*u equally implies a=u*n — so when
+    // NAV and Units happen to share the same decimal precision (some
+    // statements give both to 3 places), the score above ties and the "best"
+    // pick is essentially a coin flip. Detect that case explicitly and expose
+    // the alternate (swapped) reading, so the caller can disambiguate using
+    // better information (e.g. the fund's running unit balance) instead of
+    // this function silently guessing.
+    const tiedAlt = allValid.find(c =>
+      c!==best && c.amount===best.amount && c.score===best.score &&
+      Math.abs(c.nav-best.units)<1e-6 && Math.abs(c.units-best.nav)<1e-6
+    );
+    if(tiedAlt){ best.tied = true; best.altNav = tiedAlt.nav; best.altUnits = tiedAlt.units; }
     return best;
+  }
+  function median(arr){
+    if(!arr.length) return null;
+    const s = arr.slice().sort((a,b)=>a-b);
+    const mid = Math.floor(s.length/2);
+    return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2;
   }
 
   function parseStatementText(rawText){
@@ -1505,13 +1639,22 @@
     // lazy match would otherwise sweep in preceding folio numbers or the
     // investor's own name as if they were part of the fund name. Some single-
     // fund AMC statements have no such prefix at all, so that's the fallback.
-    const anchoredRe = /([A-Z0-9]{2,10}\s*[-\/]\s*[A-Za-z][A-Za-z0-9 \-\.\(\)&,']{2,138}?)\s*[-\/:]?\s*\(?\s*(IN[A-Z0-9]{10})\)?/g;
+    //
+    // The prefix itself is validated (contains a digit, or is 6+ letters) so
+    // an ordinary capitalized word that happens to precede a hyphen — like
+    // "FUND" in "...GROWTH MID CAP FUND - DIRECT GROWTH..." — isn't mistaken
+    // for a product code and doesn't truncate the real name.
+    const anchoredRe = /([A-Z0-9]{2,10})\s*[-\/]\s*([A-Za-z][A-Za-z0-9 \-\.\(\)&,']{2,138}?)\s*[-\/:]?\s*\(?\s*(IN[A-Z0-9]{10})\)?/g;
     const looseRe = /([A-Za-z0-9][A-Za-z0-9 \/\-\.\(\)&,']{4,140}?)\s*[-\/:]?\s*\(?\s*(IN[A-Z0-9]{10})\)?/g;
-    let matches = [...flat.matchAll(anchoredRe)];
-    if(!matches.length) matches = [...flat.matchAll(looseRe)];
+    const isValidCodePrefix = (p) => /\d/.test(p) || p.length>=6;
+    let matches = [...flat.matchAll(anchoredRe)].filter(hm=>isValidCodePrefix(hm[1]));
+    let anchored = true;
+    if(!matches.length){ matches = [...flat.matchAll(looseRe)]; anchored = false; }
     const headers = [];
     matches.forEach(hm=>{
-      const name = hm[1]
+      const rawName = anchored ? hm[2] : hm[1];
+      const isin = anchored ? hm[3] : hm[2];
+      const name = rawName
         .replace(/\bISIN\s*:?\s*$/i,'')
         .replace(/\(NON[- ]?DEMAT\)|\(DEMAT\)/i,'')
         .replace(/\((?:formerly|erstwhile)[^)]*\)/gi,'')      // historical name notes, e.g. "(formerly Parag Parikh Long Term Value Fund)"
@@ -1520,7 +1663,7 @@
         .replace(/\s+/g,' ')
         .replace(/^[\s\-,]+|[\s\-,]+$/g,'')                    // stray leading/trailing punctuation left after the above cleanups
         .trim();
-      headers.push({ name, isin: hm[2], start: hm.index + hm[0].length });
+      headers.push({ name, isin, start: hm.index + hm[0].length });
     });
     if(!headers.length) return rows2D;
     // Description is barred from crossing into another date — without this,
@@ -1532,6 +1675,9 @@
     headers.forEach((h, i)=>{
       const segEnd = (i+1 < headers.length) ? headers[i+1].start : flat.length;
       const segment = flat.slice(h.start, segEnd);
+      const openingMatch = segment.match(/Opening\s+Unit\s+Balance\s*:\s*([\d,]+\.\d+)/i);
+      let prevBalance = openingMatch ? parseFloat(openingMatch[1].replace(/,/g,'')) : null;
+      const rowsForScheme = [];
       let m;
       txnRe.lastIndex = 0;
       while((m = txnRe.exec(segment))){
@@ -1543,8 +1689,47 @@
         if(/redeem|redempt/i.test(desc)) type='Redemption';
         else if(/switch/i.test(desc)) type='Switch';
         else if(/dividend|idcw/i.test(desc)) type='Dividend';
-        rows2D.push([h.name, '', date, String(roles.amount), String(roles.nav), String(roles.units), '', type, h.isin || '']);
+        // Every format seen so far (KFintech, CAMS, PPFAS-style) ends each
+        // transaction row with a running unit balance — capture it as a
+        // disambiguation aid, independent of whichever numbers findNumberRoles
+        // used for amount/nav/units.
+        const candidateBalance = parseFloat(String(numStrs[numStrs.length-1]).replace(/,/g,''));
+        rowsForScheme.push({date, type, roles, candidateBalance});
       }
+      // Some statements give NAV and Units the same decimal precision, so
+      // findNumberRoles can't always tell them apart from a single row alone
+      // (roles.tied). Resolve those precisely using the running balance: this
+      // row's Units should equal (this row's balance − the previous row's
+      // balance) almost exactly — far more reliable than any per-row guess.
+      const confidentNavs = [];
+      rowsForScheme.forEach(r=>{
+        if(r.roles.tied && prevBalance!=null && !isNaN(r.candidateBalance)){
+          const expectedUnits = r.candidateBalance - prevBalance;
+          if(expectedUnits > 0){
+            const errCurrent = Math.abs(r.roles.units - expectedUnits);
+            const errAlt = Math.abs(r.roles.altUnits - expectedUnits);
+            if(errAlt < errCurrent){
+              const swap = r.roles.nav; r.roles.nav = r.roles.altNav; r.roles.units = r.roles.altUnits; r.roles.altNav = swap;
+            }
+          }
+        }
+        if(!r.roles.tied) confidentNavs.push(r.roles.nav);
+        if(!isNaN(r.candidateBalance) && r.candidateBalance >= (prevBalance||0) - 0.01) prevBalance = r.candidateBalance;
+      });
+      // Fallback for any still-tied rows with no usable balance trail (e.g. no
+      // "Opening Unit Balance" line to anchor the first row): use the fund's
+      // typical NAV level from its own confidently-resolved rows instead.
+      const refNav = median(confidentNavs);
+      rowsForScheme.forEach(r=>{
+        if(r.roles.tied && refNav!=null && refNav>0){
+          const distToNav = Math.abs(Math.log(r.roles.nav/refNav));
+          const distToAlt = Math.abs(Math.log(r.roles.altNav/refNav));
+          if(distToAlt < distToNav){
+            const swap = r.roles.nav; r.roles.nav = r.roles.altNav; r.roles.units = r.roles.altUnits; r.roles.altNav = swap;
+          }
+        }
+        rows2D.push([h.name, '', r.date, String(r.roles.amount), String(r.roles.nav), String(r.roles.units), '', r.type, h.isin || '']);
+      });
     });
     return rows2D;
   }
