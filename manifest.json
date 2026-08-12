@@ -1,6 +1,6 @@
 {
-  "name": "Fund Ledger",
-  "short_name": "Fund Ledger",
+  "name": "Wealth Ledger",
+  "short_name": "Wealth Ledger",
   "description": "Track mutual fund investments, returns, and goals — entirely on your device, nothing sent to any server.",
   "start_url": "./index.html",
   "scope": "./",

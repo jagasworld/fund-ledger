@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fund Ledger</title>
+<title>Wealth Ledger</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16233D">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -177,8 +177,8 @@
 
   <header class="ledger-header">
     <div>
-      <h1>Fund Ledger</h1>
-      <p>Monthly mutual fund entries — one place, no broken formulas.</p>
+      <h1>Wealth Ledger</h1>
+      <p>See what your investments are really earning — not a spreadsheet guess.</p>
     </div>
     <div style="display:flex;align-items:center;gap:16px;">
       <button type="button" id="aboutBtn" class="link-btn" style="white-space:nowrap;">ⓘ What can I do here?</button>
@@ -193,13 +193,18 @@
   <section class="panel" id="onboardingBanner" style="display:none;border-left:3px solid var(--gold);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
       <div>
-        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-bottom:10px;color:var(--ink);">What you can do here</div>
-        <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--ink-soft);line-height:1.8;">
-          <li>Log SIP or lump-sum entries by hand, or <strong style="color:var(--ink);">upload a CAMS/KFintech consolidated statement</strong> to import your history automatically</li>
-          <li><strong style="color:var(--ink);">XIRR, absolute returns, and rolling returns</strong> (3M/1Y/3Y/5Y/10Y) are calculated from your actual transactions, not estimates</li>
-          <li>Use the <strong style="color:var(--ink);">Goal planner</strong> to see when you'll reach a target corpus, including step-up SIPs and contribution end dates — mutual funds or other assets like gold and PPF</li>
-          <li>Everything stays on this device — nothing is sent to any server except anonymous fund NAV lookups</li>
-        </ul>
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin-bottom:8px;color:var(--ink);">Know what your money is actually earning</div>
+        <p style="margin:0;font-size:14px;color:var(--ink-soft);line-height:1.6;max-width:560px;">Upload a statement or add entries by hand — get real XIRR, not a spreadsheet guess. Everything stays on your device, never on a server.</p>
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;font-size:12px;color:var(--gold-ink);font-weight:600;">See everything it does</summary>
+          <ul style="margin:10px 0 0;padding-left:18px;font-size:13px;color:var(--ink-soft);line-height:1.8;">
+            <li>Log SIP or lump-sum entries by hand, or <strong style="color:var(--ink);">upload a CAMS/KFintech consolidated statement</strong> to import your history automatically</li>
+            <li><strong style="color:var(--ink);">XIRR, absolute returns, and rolling returns</strong> (3M/1Y/3Y/5Y/10Y) are calculated from your actual transactions, not estimates</li>
+            <li>See how much you invested and what it returned over the <strong style="color:var(--ink);">last 1, 2, or 3 years</strong>, per fund or all together</li>
+            <li>Use the <strong style="color:var(--ink);">Goal planner</strong> to see when you'll reach a target corpus, including step-up SIPs and contribution end dates — mutual funds or other assets like gold and PPF</li>
+            <li>Everything stays on this device — nothing is sent to any server except anonymous fund NAV lookups</li>
+          </ul>
+        </details>
       </div>
       <button type="button" id="dismissOnboardingBtn" class="secondary" style="padding:4px 11px;font-size:16px;line-height:1;flex-shrink:0;">×</button>
     </div>
@@ -1883,7 +1888,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const stamp = new Date().toISOString().slice(0,10);
-    a.href = url; a.download = `fund-ledger-backup-${stamp}.json`; a.click();
+    a.href = url; a.download = `wealth-ledger-backup-${stamp}.json`; a.click();
     URL.revokeObjectURL(url);
     toast('Backup downloaded');
   });
@@ -1903,7 +1908,7 @@
         await save(); renderAll();
         toast('Backup restored');
       }catch(err){
-        alert('This file doesn\'t look like a valid fund-ledger backup.');
+        alert('This file doesn\'t look like a valid Wealth Ledger backup.');
       }
       e.target.value = '';
     };
@@ -1921,7 +1926,7 @@
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'fund-ledger-export.csv'; a.click();
+    a.href = url; a.download = 'wealth-ledger-export.csv'; a.click();
     URL.revokeObjectURL(url);
   });
 
