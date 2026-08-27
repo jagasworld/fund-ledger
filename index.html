@@ -170,6 +170,18 @@
   .chart-box{height:260px;}
   select#filterFund{max-width:220px;}
   .badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:10px;background:var(--paper-deep);color:var(--ink-soft);margin-left:6px;}
+
+  /* Portfolio tabs */
+  .portfolio-tab{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 12px;border-radius:20px;border:1px solid var(--line);
+    background:var(--card);cursor:pointer;font-size:13px;color:var(--ink-soft);
+    user-select:none;
+  }
+  .portfolio-tab:hover{border-color:var(--gold);}
+  .portfolio-tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600;}
+  .portfolio-tab .tab-icon{background:none;border:none;padding:0 2px;font-size:11px;cursor:pointer;color:inherit;opacity:0.65;line-height:1;}
+  .portfolio-tab .tab-icon:hover{opacity:1;}
 </style>
 </head>
 <body>
@@ -189,6 +201,11 @@
       </div>
     </div>
   </header>
+
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+    <div id="portfolioTabs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    <button type="button" id="addPortfolioBtn" class="secondary" style="padding:6px 10px;font-size:12px;">+ Add portfolio</button>
+  </div>
 
   <section class="panel" id="onboardingBanner" style="display:none;border-left:3px solid var(--gold);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
@@ -486,9 +503,11 @@
 (function(){
   "use strict";
 
-  let funds = [];        // {id, name, code, latestNav, latestNavDate}
+  let funds = [];        // {id, name, code, latestNav, latestNavDate, portfolioId}
   let txns = [];          // {id, fundId, date (ISO), amount, nav, units}
-  let customAssets = [];  // {id, name, currentValue, planRate, planAmount, planFrequency, planYears, planStepUp} - goal planner only, not tracked as transactions
+  let customAssets = [];  // {id, name, currentValue, planRate, planAmount, planFrequency, planYears, planStepUp, portfolioId} - goal planner only, not tracked as transactions
+  let portfolios = [];     // {id, name}
+  let activePortfolioId = null; // a portfolio's id, or '__all__' for the combined view
   let chart = null;
 
   const $ = id => document.getElementById(id);
@@ -563,6 +582,8 @@
       localStorage.setItem('mf_funds', JSON.stringify(funds));
       localStorage.setItem('mf_txns', JSON.stringify(txns));
       localStorage.setItem('mf_assets', JSON.stringify(customAssets));
+      localStorage.setItem('mf_portfolios', JSON.stringify(portfolios));
+      localStorage.setItem('mf_active_portfolio', activePortfolioId || '');
     }catch(e){ console.error('save failed', e); toast('Could not save — your browser may be blocking storage'); }
   }
   async function load(){
@@ -578,7 +599,102 @@
       const a = localStorage.getItem('mf_assets');
       customAssets = a ? JSON.parse(a) : [];
     }catch(e){ customAssets = []; }
+    try{
+      const p = localStorage.getItem('mf_portfolios');
+      portfolios = p ? JSON.parse(p) : [];
+    }catch(e){ portfolios = []; }
+
+    // Migration: anyone using the app before multi-portfolio support has funds
+    // and assets with no portfolioId. Fold them all into one default portfolio
+    // so nothing is lost or hidden.
+    if(!portfolios.length){
+      const defaultPortfolio = {id: uid(), name: 'My Portfolio'};
+      portfolios = [defaultPortfolio];
+      funds.forEach(f=>{ if(!f.portfolioId) f.portfolioId = defaultPortfolio.id; });
+      customAssets.forEach(a=>{ if(!a.portfolioId) a.portfolioId = defaultPortfolio.id; });
+    }
+    try{
+      const saved = localStorage.getItem('mf_active_portfolio');
+      activePortfolioId = (saved && (saved==='__all__' || portfolios.some(p=>p.id===saved))) ? saved : portfolios[0].id;
+    }catch(e){ activePortfolioId = portfolios[0].id; }
   }
+
+  // ---------- Portfolio scoping helpers ----------
+  // Every render function reads through these instead of the raw arrays, so
+  // switching portfolios (or viewing "Combined") only requires these to be
+  // correct — nothing else needs to know about portfolios directly.
+  function activeFunds(){
+    return activePortfolioId==='__all__' ? funds : funds.filter(f=>f.portfolioId===activePortfolioId);
+  }
+  function activeAssets(){
+    return activePortfolioId==='__all__' ? customAssets : customAssets.filter(a=>a.portfolioId===activePortfolioId);
+  }
+  function activeTxns(){
+    const fundIds = new Set(activeFunds().map(f=>f.id));
+    return txns.filter(t=>fundIds.has(t.fundId));
+  }
+  function portfolioName(id){
+    const p = portfolios.find(x=>x.id===id);
+    return p ? p.name : '—';
+  }
+
+  // ---------- Portfolio tabs ----------
+  function renderPortfolioTabs(){
+    const container = $('portfolioTabs');
+    if(!container) return;
+    const tabs = [...portfolios.map(p=>({id:p.id, name:p.name, combined:false})), {id:'__all__', name:'Combined', combined:true}];
+    container.innerHTML = tabs.map(t=>{
+      const active = t.id===activePortfolioId;
+      const icons = !t.combined
+        ? `<button type="button" class="tab-icon" data-portfolio-rename="${t.id}" title="Rename">✎</button>${portfolios.length>1?`<button type="button" class="tab-icon" data-portfolio-delete="${t.id}" title="Delete">×</button>`:''}`
+        : '';
+      return `<div class="portfolio-tab ${active?'active':''}" data-portfolio-select="${t.id}">
+        <span>${escapeHtml(t.name)}</span>${icons}
+      </div>`;
+    }).join('');
+  }
+
+  $('portfolioTabs').addEventListener('click', async (e)=>{
+    const renameId = e.target.getAttribute('data-portfolio-rename');
+    const deleteId = e.target.getAttribute('data-portfolio-delete');
+    if(renameId){
+      const p = portfolios.find(x=>x.id===renameId);
+      const newName = prompt('Rename portfolio:', p.name);
+      if(newName && newName.trim()){
+        p.name = newName.trim();
+        await save(); renderAll();
+      }
+      return;
+    }
+    if(deleteId){
+      const p = portfolios.find(x=>x.id===deleteId);
+      if(!confirm(`Delete portfolio "${p.name}"? This also deletes all its funds, transactions, and other investments. This cannot be undone.`)) return;
+      const idsToRemove = new Set(funds.filter(f=>f.portfolioId===deleteId).map(f=>f.id));
+      funds = funds.filter(f=>f.portfolioId!==deleteId);
+      txns = txns.filter(t=>!idsToRemove.has(t.fundId));
+      customAssets = customAssets.filter(a=>a.portfolioId!==deleteId);
+      portfolios = portfolios.filter(x=>x.id!==deleteId);
+      if(activePortfolioId===deleteId) activePortfolioId = portfolios[0].id;
+      await save(); renderAll();
+      toast('Portfolio deleted');
+      return;
+    }
+    const tabEl = e.target.closest('[data-portfolio-select]');
+    if(tabEl){
+      activePortfolioId = tabEl.getAttribute('data-portfolio-select');
+      await save(); renderAll();
+    }
+  });
+
+  $('addPortfolioBtn').addEventListener('click', async ()=>{
+    const name = prompt('Name for the new portfolio (e.g. "Dad", "Wife"):');
+    if(!name || !name.trim()) return;
+    const p = {id:uid(), name:name.trim()};
+    portfolios.push(p);
+    activePortfolioId = p.id;
+    await save(); renderAll();
+    toast(`Portfolio "${p.name}" added`);
+  });
 
   // ---------- Date parsing (handles the messy formats from spreadsheets) ----------
   const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,june:5,jul:6,july:6,aug:7,sep:8,sept:8,oct:9,nov:10,dec:11};
@@ -666,7 +782,7 @@
   function portfolioTotals(){
     let invested=0, current=0, units=0;
     const cashflows=[];
-    funds.forEach(f=>{
+    activeFunds().forEach(f=>{
       const s = fundStats(f);
       invested += s.invested; current += s.current; units += s.units;
       txns.filter(t=>t.fundId===f.id).forEach(r=>cashflows.push({date:r.date, amount:-r.amount}));
@@ -690,14 +806,16 @@
 
   function renderFunds(){
     const tbody = $('fundsTbody');
+    const list = activeFunds();
+    const combined = activePortfolioId==='__all__';
     tbody.innerHTML = '';
-    $('fundsEmpty').style.display = funds.length ? 'none' : 'block';
-    $('fundCountHint').textContent = funds.length ? `${funds.length} fund${funds.length>1?'s':''}` : '';
-    funds.forEach(f=>{
+    $('fundsEmpty').style.display = list.length ? 'none' : 'block';
+    $('fundCountHint').textContent = list.length ? `${list.length} fund${list.length>1?'s':''}` : '';
+    list.forEach(f=>{
       const s = fundStats(f);
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="fund-name">${escapeHtml(f.name)}</td>
+        <td class="fund-name">${escapeHtml(f.name)}${combined?`<div style="font-size:10px;color:var(--ink-soft);font-weight:400;">${escapeHtml(portfolioName(f.portfolioId))}</div>`:''}</td>
         <td class="fund-code">
           <input type="text" value="${escapeHtml(f.code||'')}" data-code-fund="${f.id}" style="width:120px;font-size:11px;padding:4px 6px;" placeholder="AMFI code">
           ${f.isin ? `<div style="margin-top:3px;font-size:10px;color:var(--ink-soft);">ISIN ${escapeHtml(f.isin)}</div>` : ''}
@@ -718,20 +836,22 @@
   function renderLedgerFilter(){
     const sel = $('filterFund');
     const current = sel.value;
-    sel.innerHTML = '<option value="">All funds</option>' + funds.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
+    sel.innerHTML = '<option value="">All funds</option>' + activeFunds().map(f=>`<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
     sel.value = current;
   }
 
   function renderLedger(){
     const tbody = $('ledgerTbody');
     const filter = $('filterFund').value;
+    const combined = activePortfolioId==='__all__';
+    const scoped = activeTxns();
 
     // Serial numbers reflect true chronological order (oldest = 1) across ALL
     // transactions, regardless of filter or the newest-first display order below.
     const chronological = txns.slice().sort((a,b)=> a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
     const serialOf = new Map(chronological.map((t,i)=>[t.id, i+1]));
 
-    const rows = txns.filter(t=>!filter || t.fundId===filter).slice().sort((a,b)=>b.date.localeCompare(a.date));
+    const rows = scoped.filter(t=>!filter || t.fundId===filter).slice().sort((a,b)=>b.date.localeCompare(a.date));
     tbody.innerHTML = '';
     $('ledgerEmpty').style.display = rows.length ? 'none' : 'block';
     rows.forEach(r=>{
@@ -748,7 +868,7 @@
       tr.innerHTML = `
         <td class="num">${serialOf.get(r.id)}</td>
         <td class="num">${fmtDate(r.date)}</td>
-        <td>${fund?escapeHtml(fund.name):'—'}</td>
+        <td>${fund?escapeHtml(fund.name):'—'}${combined&&fund?`<div style="font-size:10px;color:var(--ink-soft);">${escapeHtml(portfolioName(fund.portfolioId))}</div>`:''}</td>
         <td class="right num">${fmtMoney(r.amount)}</td>
         <td class="right num">${fmtNum(r.nav,2)}</td>
         <td class="right num">${fmtNum(r.units,3)}</td>
@@ -762,11 +882,16 @@
 
   function renderChart(){
     const ctx = document.getElementById('fundChart');
-    const labels = funds.map(f=>f.name.length>18?f.name.slice(0,18)+'…':f.name);
-    const invested = funds.map(f=>fundStats(f).invested);
-    const current = funds.map(f=>fundStats(f).current);
+    const list = activeFunds();
+    const combined = activePortfolioId==='__all__';
+    const labels = list.map(f=>{
+      const label = combined ? `${f.name} (${portfolioName(f.portfolioId)})` : f.name;
+      return label.length>22 ? label.slice(0,22)+'…' : label;
+    });
+    const invested = list.map(f=>fundStats(f).invested);
+    const current = list.map(f=>fundStats(f).current);
     if(chart) chart.destroy();
-    if(!funds.length){ return; }
+    if(!list.length){ return; }
     const tickColor = cssVar('--ink-soft');
     chart = new Chart(ctx, {
       type:'bar',
@@ -788,9 +913,9 @@
   function renderRolling(){
     const tbody = $('rollingTbody');
     tbody.innerHTML = '';
-    const withData = funds.filter(f=>f.rolling);
+    const withData = activeFunds().filter(f=>f.rolling);
     $('rollingEmpty').style.display = withData.length ? 'none' : 'block';
-    funds.forEach(f=>{
+    activeFunds().forEach(f=>{
       if(!f.rolling) return;
       const cell = (v) => {
         if(v===null || v===undefined) return '<td class="right num">—</td>';
@@ -807,9 +932,10 @@
 
   function renderGoalFunds(){
     const tbody = $('goalFundsTbody');
+    const list = activeFunds();
     tbody.innerHTML = '';
-    $('goalEmpty').style.display = funds.length ? 'none' : 'block';
-    funds.forEach(f=>{
+    $('goalEmpty').style.display = list.length ? 'none' : 'block';
+    list.forEach(f=>{
       const s = fundStats(f);
       const defaultRate = f.planRate!=null ? f.planRate : (s.ret!=null ? Math.round(s.ret*100)/100 : '');
       const tr = document.createElement('tr');
@@ -847,9 +973,10 @@
 
   function renderAssets(){
     const tbody = $('assetsTbody');
+    const list = activeAssets();
     tbody.innerHTML = '';
-    $('assetsEmpty').style.display = customAssets.length ? 'none' : 'block';
-    customAssets.forEach(a=>{
+    $('assetsEmpty').style.display = list.length ? 'none' : 'block';
+    list.forEach(a=>{
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="fund-name">${escapeHtml(a.name)}</td>
@@ -894,7 +1021,8 @@
     const name = $('assetName').value.trim();
     const value = parseFloat($('assetValue').value) || 0;
     if(!name){ toast('Enter a name for this investment'); return; }
-    customAssets.push({id:uid(), name, currentValue:value, planRate:0, planAmount:0, planFrequency:'monthly', planYears:null, planStepUp:0});
+    if(activePortfolioId==='__all__'){ toast('Switch to a specific portfolio first — Combined is view-only'); return; }
+    customAssets.push({id:uid(), name, currentValue:value, planRate:0, planAmount:0, planFrequency:'monthly', planYears:null, planStepUp:0, portfolioId:activePortfolioId});
     await save(); renderAssets();
     $('assetName').value=''; $('assetValue').value='';
     toast('Investment added');
@@ -911,13 +1039,13 @@
     // Unify funds and custom (non-fund) assets into one list of plan items so the
     // simulation logic is identical for both.
     const items = [
-      ...funds.map(f=>({
+      ...activeFunds().map(f=>({
         key:'f:'+f.id,
         current: fundStats(f).current,
         rate: (f.planRate!=null && !isNaN(f.planRate)) ? f.planRate : (fundStats(f).ret || 0),
         planAmount: f.planAmount||0, planFrequency: f.planFrequency, planYears: f.planYears, planStepUp: f.planStepUp||0
       })),
-      ...customAssets.map(a=>({
+      ...activeAssets().map(a=>({
         key:'a:'+a.id,
         current: a.currentValue||0,
         rate: a.planRate||0,
@@ -955,15 +1083,15 @@
     const target = parseFloat($('goalTarget').value);
     const resultEl = $('goalResult');
     if(!target || target<=0){ resultEl.innerHTML = '<p class="hint warn">Enter a target corpus first.</p>'; return; }
-    if(!funds.length && !customAssets.length){ resultEl.innerHTML = '<p class="hint warn">Add at least one investment first — a fund above, or an entry under "Other investments" below.</p>'; return; }
+    if(!activeFunds().length && !activeAssets().length){ resultEl.innerHTML = '<p class="hint warn">Add at least one investment first — a fund above, or an entry under "Other investments" below.</p>'; return; }
 
-    const zeroRateFunds = funds.filter(f=>{
+    const zeroRateFunds = activeFunds().filter(f=>{
       const s = fundStats(f);
       return (f.planRate==null || isNaN(f.planRate)) && (s.ret==null);
     });
 
     const sim = simulateGoal(target);
-    const currentTotal = portfolioTotals().current + customAssets.reduce((s,a)=>s+(a.currentValue||0),0);
+    const currentTotal = portfolioTotals().current + activeAssets().reduce((s,a)=>s+(a.currentValue||0),0);
 
     if(sim.reached){
       const reachDate = addMonths(new Date(), sim.months);
@@ -1016,19 +1144,21 @@
   function renderPeriodFundSelect(){
     const sel = $('periodFundSelect');
     const current = sel.value;
-    sel.innerHTML = '<option value="">All funds</option>' + funds.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
-    sel.value = funds.some(f=>f.id===current) ? current : '';
+    const list = activeFunds();
+    sel.innerHTML = '<option value="">All funds</option>' + list.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
+    sel.value = list.some(f=>f.id===current) ? current : '';
   }
 
   // Computes invested / current value / returns using only transactions dated
-  // within the last `days`, optionally restricted to one fund. `latestNavOverride`
-  // lets the breakdown table reuse a fund's own latestNav without re-deriving it.
+  // within the last `days`, optionally restricted to one fund. Always scoped
+  // to the currently active portfolio (or all of them, in Combined view).
   function computePeriodStats(days, fundId){
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
     const cutoffIso = cutoff.toISOString().slice(0,10);
     const todayIso = new Date().toISOString().slice(0,10);
-    const relevant = txns.filter(t => t.date >= cutoffIso && (!fundId || t.fundId===fundId));
+    const scopedFundIds = new Set(activeFunds().map(f=>f.id));
+    const relevant = txns.filter(t => t.date >= cutoffIso && scopedFundIds.has(t.fundId) && (!fundId || t.fundId===fundId));
     let invested = 0, current = 0;
     const cashflows = [];
     relevant.forEach(t=>{
@@ -1052,6 +1182,7 @@
     const days = parseInt($('periodWindowSelect').value, 10);
     const fundId = $('periodFundSelect').value || null;
     const resultEl = $('periodResult');
+    const combined = activePortfolioId==='__all__';
     const pct = (v) => v==null ? '—' : (v>=0?'+':'')+v.toFixed(2)+'%';
     const cls = (v) => v==null ? '' : (v>=0?'pos':'neg');
 
@@ -1074,11 +1205,11 @@
     if(!fundId){
       $('periodBreakdownWrap').style.display = 'block';
       const tbody = $('periodBreakdownTbody');
-      tbody.innerHTML = funds.map(f=>{
+      tbody.innerHTML = activeFunds().map(f=>{
         const s = computePeriodStats(days, f.id);
         if(!s.count) return '';
         return `<tr>
-          <td class="fund-name">${escapeHtml(f.name)}</td>
+          <td class="fund-name">${escapeHtml(f.name)}${combined?`<div style="font-size:10px;color:var(--ink-soft);font-weight:400;">${escapeHtml(portfolioName(f.portfolioId))}</div>`:''}</td>
           <td class="right num">${fmtMoney(s.invested)}</td>
           <td class="right num">${fmtMoney(s.current)}</td>
           <td class="right num ${cls(s.absReturn)}">${pct(s.absReturn)}</td>
@@ -1094,7 +1225,7 @@
   $('periodWindowSelect').addEventListener('change', renderPeriodReturns);
 
   function renderAll(){
-    renderSummary(); renderFunds(); renderRolling(); renderGoalFunds(); renderAssets(); renderLedgerFilter(); renderLedger(); renderChart(); renderPeriodFundSelect(); renderPeriodReturns();
+    renderPortfolioTabs(); renderSummary(); renderFunds(); renderRolling(); renderGoalFunds(); renderAssets(); renderLedgerFilter(); renderLedger(); renderChart(); renderPeriodFundSelect(); renderPeriodReturns();
   }
 
   function escapeHtml(s){ const d=document.createElement('div'); d.textContent = s==null?'':s; return d.innerHTML; }
@@ -1118,13 +1249,13 @@
   // ---------- Fund lookup / creation ----------
   function findOrCreateFund(name, code, isin){
     name = name.trim();
-    let f = funds.find(x=> normalizeFundCore(x.name) === normalizeFundCore(name));
+    let f = funds.find(x=> x.portfolioId===activePortfolioId && normalizeFundCore(x.name) === normalizeFundCore(name));
     if(f){
       if(code && !f.code) f.code = code; // keep the fund's existing stored name — don't overwrite with a variant spelling
       if(isin && !f.isin) f.isin = isin;
       return f;
     }
-    f = {id:uid(), name, code: code||'', isin: isin||'', latestNav:0, latestNavDate:null};
+    f = {id:uid(), name, code: code||'', isin: isin||'', latestNav:0, latestNavDate:null, portfolioId:activePortfolioId};
     funds.push(f);
     return f;
   }
@@ -1263,6 +1394,7 @@
     const amount = parseFloat($('amountInput').value);
     const nav = parseFloat($('navInput').value);
     const hint = $('entryHint');
+    if(activePortfolioId==='__all__'){ hint.textContent='Switch to a specific portfolio first — Combined is view-only.'; hint.className='hint warn'; return; }
     if(!name){ hint.textContent='Enter a fund name.'; hint.className='hint warn'; return; }
     if(!date){ hint.textContent='Pick a transaction date.'; hint.className='hint warn'; return; }
     if(!amount || amount<=0){ hint.textContent='Enter a valid amount.'; hint.className='hint warn'; return; }
@@ -1430,7 +1562,7 @@
         entry.status='skip'; entry.overridable=false; entry.reason='No NAV or units given, and none could be derived'; entry.checked=false;
       } else {
         const sig = name.toLowerCase()+'|'+date+'|'+amount.toFixed(2);
-        const existsAlready = txns.some(t=>{
+        const existsAlready = activeTxns().some(t=>{
           const f = funds.find(x=>x.id===t.fundId);
           return f && normalizeFundCore(f.name)===normalizeFundCore(name) && t.date===date && Math.abs(t.amount-amount)<0.01;
         });
@@ -1490,6 +1622,7 @@
   $('previewImportBtn').addEventListener('click', ()=>{
     const raw = $('importText').value;
     const hint = $('importHint');
+    if(activePortfolioId==='__all__'){ hint.textContent='Switch to a specific portfolio first — Combined is view-only.'; hint.className='hint warn'; return; }
     if(!raw.trim()){ hint.textContent='Paste some rows first.'; hint.className='hint warn'; return; }
     applyAnalysisResult(analyzeImportText(raw), hint);
   });
@@ -1769,13 +1902,15 @@
     pendingFileRows2D = rows2D;
     pendingFileExt = ext;
 
-    // Suggest existing fund names so the person can match one exactly and avoid
-    // creating a duplicate fund under a slightly different spelling.
-    $('existingFundNames').innerHTML = funds.map(f=>`<option value="${escapeHtml(f.name)}">`).join('');
+    // Suggest existing fund names (within this portfolio only) so the person
+    // can match one exactly and avoid creating a duplicate under a slightly
+    // different spelling. Funds in other portfolios are deliberately excluded
+    // — those belong to a different person's holdings.
+    $('existingFundNames').innerHTML = activeFunds().map(f=>`<option value="${escapeHtml(f.name)}">`).join('');
 
     const container = $('nameConfirmRows');
     container.innerHTML = names.map((n,i)=>{
-      const existingMatch = funds.find(f=>normalizeFundCore(f.name)===normalizeFundCore(n));
+      const existingMatch = activeFunds().find(f=>normalizeFundCore(f.name)===normalizeFundCore(n));
       const prefill = existingMatch ? existingMatch.name : n;
       return `
         <div class="field" style="margin-bottom:10px;">
@@ -1816,6 +1951,7 @@
     if(!file) return;
     const status = $('uploadStatus');
     const hint = $('importHint');
+    if(activePortfolioId==='__all__'){ hint.textContent='Switch to a specific portfolio first — Combined is view-only.'; hint.className='hint warn'; e.target.value=''; return; }
     status.textContent = `Reading ${file.name}…`; status.className = 'hint';
     const ext = file.name.split('.').pop().toLowerCase();
     try{
@@ -1865,6 +2001,11 @@
   });
 
   $('confirmImportBtn').addEventListener('click', async ()=>{
+    if(activePortfolioId==='__all__'){
+      $('importHint').textContent = 'Switch to a specific portfolio first — Combined is view-only.';
+      $('importHint').className = 'hint warn';
+      return;
+    }
     const toImport = pendingImport.filter(r=>r.checked);
     let added=0;
     toImport.forEach(r=>{
@@ -1886,7 +2027,7 @@
   $('backupBtn').addEventListener('click', ()=>{
     const payload = {
       exportedAt: new Date().toISOString(),
-      funds, txns
+      funds, txns, customAssets, portfolios
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
@@ -1909,7 +2050,20 @@
         const label = data.exportedAt ? ` (from ${new Date(data.exportedAt).toLocaleString()})` : '';
         if(!confirm(`Restore this backup${label}? This replaces everything currently in the app.`)) { e.target.value=''; return; }
         funds = data.funds; txns = data.txns;
-        await save(); renderAll();
+        customAssets = Array.isArray(data.customAssets) ? data.customAssets : [];
+        // Backups from before multi-portfolio support won't have a portfolios
+        // array or portfolioId on funds/assets — migrate them the same way a
+        // fresh load() does, so restoring an old backup still works cleanly.
+        if(Array.isArray(data.portfolios) && data.portfolios.length){
+          portfolios = data.portfolios;
+        } else {
+          const defaultPortfolio = {id: uid(), name: 'My Portfolio'};
+          portfolios = [defaultPortfolio];
+          funds.forEach(f=>{ if(!f.portfolioId) f.portfolioId = defaultPortfolio.id; });
+          customAssets.forEach(a=>{ if(!a.portfolioId) a.portfolioId = defaultPortfolio.id; });
+        }
+        activePortfolioId = portfolios[0].id;
+        await save(); renderAll(); renderPortfolioTabs();
         toast('Backup restored');
       }catch(err){
         alert('This file doesn\'t look like a valid Wealth Ledger backup.');
@@ -1922,7 +2076,7 @@
   // ---------- Export ----------
   $('exportBtn').addEventListener('click', ()=>{
     const header = ['Scheme','Scheme Code','Transaction Date','Amount','Purchase NAV','# of Units','Latest NAV','ISIN'];
-    const rows = txns.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{
+    const rows = activeTxns().slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{
       const f = funds.find(x=>x.id===t.fundId);
       return [f?f.name:'', f?f.code:'', fmtDate(t.date), t.amount, t.nav, t.units, f?f.latestNav:'', f?f.isin:''];
     });
@@ -1930,16 +2084,26 @@
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'wealth-ledger-export.csv'; a.click();
+    const scope = activePortfolioId==='__all__' ? 'combined' : portfolioName(activePortfolioId).toLowerCase().replace(/\s+/g,'-');
+    a.href = url; a.download = `wealth-ledger-export-${scope}.csv`; a.click();
     URL.revokeObjectURL(url);
   });
 
   // ---------- Clear all ----------
   $('clearBtn').addEventListener('click', async ()=>{
-    if(!confirm('This deletes all funds and transactions from this app. Continue?')) return;
-    funds = []; txns = [];
+    if(activePortfolioId==='__all__'){
+      if(!confirm('This deletes EVERY portfolio and all their data. This cannot be undone. Continue?')) return;
+      funds = []; txns = []; customAssets = [];
+    } else {
+      const name = portfolioName(activePortfolioId);
+      if(!confirm(`This deletes all funds, transactions, and other investments in "${name}" only. Other portfolios are untouched. Continue?`)) return;
+      const idsToRemove = new Set(funds.filter(f=>f.portfolioId===activePortfolioId).map(f=>f.id));
+      funds = funds.filter(f=>f.portfolioId!==activePortfolioId);
+      txns = txns.filter(t=>!idsToRemove.has(t.fundId));
+      customAssets = customAssets.filter(a=>a.portfolioId!==activePortfolioId);
+    }
     await save(); renderAll();
-    toast('All data cleared');
+    toast('Data cleared');
   });
 
   // ---------- Init ----------
