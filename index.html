@@ -29,7 +29,11 @@
     --line: #CBC4AF;
     --line-soft: #DFDACB;
     --ledger-line: rgba(22,35,61,0.028);
-    --radius: 3px;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow-sm: 0 1px 2px rgba(22,35,61,0.05), 0 1px 1px rgba(22,35,61,0.04);
+    --shadow-md: 0 6px 20px rgba(22,35,61,0.08), 0 2px 6px rgba(22,35,61,0.05);
+    --shadow-lift: 0 14px 36px rgba(22,35,61,0.14), 0 4px 10px rgba(22,35,61,0.08);
   }
   [data-theme="dark"]{
     --paper: #191C24;
@@ -46,8 +50,12 @@
     --line: #383C48;
     --line-soft: #2A2E38;
     --ledger-line: rgba(235,231,220,0.035);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.25), 0 1px 1px rgba(0,0,0,0.2);
+    --shadow-md: 0 6px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
+    --shadow-lift: 0 14px 36px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.3);
   }
   *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
   body{
     margin:0;
     background:
@@ -57,54 +65,122 @@
     font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size:14px;
     line-height:1.5;
-    padding:28px 20px 80px;
+    padding:32px 20px 80px;
+    transition:background-color .35s ease, color .35s ease;
   }
-  .wrap{max-width:1080px;margin:0 auto;}
+  .wrap{max-width:1080px;margin:0 auto;position:relative;z-index:1;}
+
+  /* Ambient floating graphics — sit in the empty margins beside the content
+     column, never over it. Only shown where there's actually room (wide
+     viewports) and never for anyone who's asked for reduced motion. */
+  .ambient-graphics{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;display:none;}
+  @media (min-width:1360px){ .ambient-graphics{display:block;} }
+  @media (prefers-reduced-motion: reduce){ .ambient-graphics{display:none !important;} }
+  .floater{
+    position:absolute;bottom:-10vh;
+    font-family:'Fraunces',serif;font-weight:600;color:var(--gold);
+    opacity:0;user-select:none;line-height:1;
+    animation-name:floatUp;animation-timing-function:linear;animation-iteration-count:infinite;
+  }
+  .floater.coin{
+    width:24px;height:24px;border-radius:50%;border:2px dashed var(--gold);color:transparent;
+  }
+  @keyframes floatUp{
+    0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0;}
+    8%{opacity:0.38;}
+    92%{opacity:0.38;}
+    100%{transform:translateY(-125vh) translateX(24px) rotate(16deg);opacity:0;}
+  }
   .num{font-family:'IBM Plex Mono', 'SF Mono', Menlo, monospace;font-variant-numeric:tabular-nums;}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;scroll-behavior:auto !important;}
+  }
 
   /* Header */
   header.ledger-header{
     display:flex;justify-content:space-between;align-items:flex-start;
+    position:relative;
     border-bottom:2px solid var(--ink);
-    padding-bottom:18px;margin-bottom:26px;gap:20px;flex-wrap:wrap;
+    padding-bottom:22px;margin-bottom:28px;gap:20px;flex-wrap:wrap;
+    overflow:visible;
   }
+  .header-ornament{display:none;}
   header.ledger-header h1{
     font-family:'Fraunces', Georgia, serif;
-    font-weight:600;font-size:34px;margin:0 0 4px;letter-spacing:-0.01em;color:var(--ink);
+    font-weight:600;font-size:36px;margin:0 0 6px;letter-spacing:-0.015em;color:var(--ink);
   }
-  header.ledger-header p{margin:0;color:var(--ink-soft);font-size:13px;}
+  header.ledger-header p{margin:0;color:var(--ink-soft);font-size:13.5px;}
   .seal{
     width:96px;height:96px;border-radius:50%;
     border:2px dashed var(--gold);
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    transform:rotate(-7deg);flex-shrink:0;
+    transform:rotate(-7deg);flex-shrink:0;position:relative;
     color:var(--gold-ink);
+    filter:drop-shadow(0 6px 14px rgba(185,138,30,0.22));
+    animation:sealSettle .6s cubic-bezier(.2,.9,.3,1.2) both;
+  }
+  .seal::after{
+    content:'';position:absolute;inset:7px;border-radius:50%;
+    border:1px dashed var(--gold);opacity:0.45;
+  }
+  @keyframes sealSettle{
+    0%{opacity:0;transform:rotate(6deg) scale(0.85);}
+    100%{opacity:1;transform:rotate(-7deg) scale(1);}
   }
   .seal .seal-label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;}
   .seal .seal-val{font-family:'Fraunces',serif;font-weight:700;font-size:22px;margin-top:2px;}
 
+  /* Panel entrance — a quiet, orchestrated settle-in rather than everything
+     appearing at once. Re-plays naturally when switching between Dashboard
+     and Goal Planner, since hidden (display:none) panels re-enter the render
+     tree each time. */
+  .panel{animation:panelIn .5s cubic-bezier(.16,.84,.44,1) both;}
+  @keyframes panelIn{
+    0%{opacity:0;transform:translateY(10px);}
+    100%{opacity:1;transform:translateY(0);}
+  }
+  .wrap > section:nth-of-type(1){animation-delay:0s;}
+  .wrap > section:nth-of-type(2){animation-delay:.05s;}
+  .wrap > section:nth-of-type(3){animation-delay:.1s;}
+  .wrap > section:nth-of-type(4){animation-delay:.15s;}
+  .wrap > section:nth-of-type(5){animation-delay:.2s;}
+  .wrap > section:nth-of-type(6){animation-delay:.25s;}
+  .wrap > section:nth-of-type(n+7){animation-delay:.3s;}
+
   /* Summary cards */
-  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
   .card{
     background:var(--card);border:1px solid var(--line-soft);border-radius:var(--radius);
-    padding:14px 16px;
+    padding:16px 18px;box-shadow:var(--shadow-sm);
+    transition:box-shadow .25s ease, transform .25s ease, background-color .35s ease, border-color .35s ease;
   }
+  .card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
   .card .label{font-size:10px;text-transform:uppercase;letter-spacing:0.09em;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
-  .card .value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;margin-top:6px;color:var(--ink);}
+  .card .value{font-family:'IBM Plex Mono',monospace;font-size:23px;font-weight:600;margin-top:7px;color:var(--ink);}
   .card .value.pos{color:var(--green);}
   .card .value.neg{color:var(--rust);}
 
   /* Panels */
   .panel{
     background:var(--card);border:1px solid var(--line-soft);border-radius:var(--radius);
-    padding:20px 22px;margin-bottom:20px;
+    padding:22px 24px;margin-bottom:20px;box-shadow:var(--shadow-sm);
+    transition:background-color .35s ease, border-color .35s ease;
   }
   .panel h2{
     font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:18px;margin:0 0 16px;
-    padding-bottom:10px;border-bottom:1px solid var(--line-soft);color:var(--ink);
+    padding-bottom:12px;border-bottom:1px solid var(--line-soft);color:var(--ink);
     display:flex;justify-content:space-between;align-items:center;gap:10px;
   }
   .panel h2 small{font-family:'Inter',sans-serif;font-weight:400;font-size:11px;color:var(--ink-soft);text-transform:none;letter-spacing:0;}
+  .h2-title{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .icon-badge{
+    width:38px;height:38px;border-radius:11px;flex-shrink:0;
+    background:linear-gradient(135deg, var(--gold), var(--green));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow-sm);
+  }
+  .icon-badge svg{width:19px;height:19px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 
   /* Form */
   .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end;}
@@ -112,22 +188,28 @@
   .field label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);}
   input,select,textarea{
     font-family:'Inter',sans-serif;font-size:13px;
-    border:1px solid var(--line);border-radius:var(--radius);
-    padding:8px 9px;background:var(--card);color:var(--ink);
+    border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:9px 10px;background:var(--card);color:var(--ink);
+    transition:border-color .2s ease, box-shadow .2s ease, background-color .35s ease;
   }
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(185,138,30,0.18);}
   input.num-input{font-family:'IBM Plex Mono',monospace;}
   button{
     font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
     border:1px solid var(--ink);background:var(--ink);color:var(--paper);
-    padding:9px 16px;border-radius:var(--radius);cursor:pointer;
+    padding:9px 16px;border-radius:var(--radius-sm);cursor:pointer;
+    box-shadow:var(--shadow-sm);
+    transition:box-shadow .2s ease, transform .15s ease, filter .2s ease;
   }
-  button:hover{filter:brightness(1.15);}
-  button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);}
-  button.secondary:hover{background:var(--paper-deep);}
-  button.link-btn{background:none;border:none;color:var(--gold-ink);font-weight:500;padding:4px 6px;text-decoration:underline;cursor:pointer;font-size:12px;}
-  button.danger-link{background:none;border:none;color:var(--rust);padding:4px 6px;cursor:pointer;font-size:12px;text-decoration:underline;}
-  button:disabled{opacity:0.5;cursor:not-allowed;}
+  button:hover{filter:brightness(1.15);box-shadow:var(--shadow-md);transform:translateY(-1px);}
+  button:active{transform:translateY(0);}
+  button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none;}
+  button.secondary:hover{background:var(--paper-deep);box-shadow:var(--shadow-sm);}
+  button.link-btn{background:none;border:none;color:var(--gold-ink);font-weight:500;padding:4px 6px;text-decoration:underline;cursor:pointer;font-size:12px;box-shadow:none;}
+  button.link-btn:hover{filter:none;box-shadow:none;transform:none;opacity:0.75;}
+  button.danger-link{background:none;border:none;color:var(--rust);padding:4px 6px;cursor:pointer;font-size:12px;text-decoration:underline;box-shadow:none;}
+  button.danger-link:hover{filter:none;box-shadow:none;transform:none;opacity:0.75;}
+  button:disabled{opacity:0.5;cursor:not-allowed;transform:none !important;}
   .row-actions{display:flex;gap:6px;}
   .hint{font-size:11px;color:var(--ink-soft);margin-top:8px;}
   .hint.warn{color:var(--rust);}
@@ -137,54 +219,120 @@
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{
     text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;
-    color:var(--ink-soft);border-bottom:1px solid var(--ink);padding:6px 8px;font-weight:600;
+    color:var(--ink-soft);border-bottom:1.5px solid var(--ink);padding:8px;font-weight:600;
+    background:var(--paper-deep);
   }
-  td{padding:8px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
+  th:first-child{border-top-left-radius:var(--radius-sm);}
+  th:last-child{border-top-right-radius:var(--radius-sm);}
+  td{padding:9px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
+  tbody tr{transition:background-color .12s ease;}
   tbody tr:hover{background:var(--paper-deep);}
   .right{text-align:right;}
-  .table-scroll{overflow-x:auto;}
+  .table-scroll{overflow-x:auto;border-radius:var(--radius-sm);}
   .fund-name{font-weight:600;}
   .fund-code{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
   .pos{color:var(--green);}
   .neg{color:var(--rust);}
-  .empty-state{padding:30px 10px;text-align:center;color:var(--ink-soft);}
+  .empty-state{padding:36px 10px;text-align:center;color:var(--ink-soft);}
   .empty-state .big{font-family:'Fraunces',serif;font-size:16px;color:var(--ink);margin-bottom:4px;}
+  .empty-illustration{width:64px;height:64px;margin:0 auto 12px;opacity:0.55;}
+  .empty-illustration svg{width:100%;height:100%;}
+
+  /* Capability showcase (onboarding) */
+  .showcase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px;}
+  .showcase-card{
+    background:var(--paper-deep);border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:16px 14px;text-align:center;
+    opacity:0;transform:translateY(12px);
+    animation:showcaseIn .55s cubic-bezier(.16,.84,.44,1) both;
+    transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  }
+  .showcase-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--gold);}
+  .showcase-card:nth-child(1){animation-delay:.15s;}
+  .showcase-card:nth-child(2){animation-delay:.28s;}
+  .showcase-card:nth-child(3){animation-delay:.41s;}
+  .showcase-card:nth-child(4){animation-delay:.54s;}
+  @keyframes showcaseIn{to{opacity:1;transform:translateY(0);}}
+  .showcase-icon{
+    width:46px;height:46px;margin:0 auto 10px;border-radius:13px;
+    background:linear-gradient(135deg, var(--gold), var(--green));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow-sm);
+  }
+  .showcase-icon svg{width:23px;height:23px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .showcase-card .sc-title{font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--ink);margin-bottom:4px;}
+  .showcase-card .sc-desc{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
 
   /* Search results dropdown */
   .search-wrap{position:relative;}
   .search-results{
     position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--line);
-    border-top:none;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 14px rgba(22,35,61,0.12);
+    border-top:none;max-height:220px;overflow-y:auto;z-index:20;box-shadow:var(--shadow-lift);
+    border-radius:0 0 var(--radius-sm) var(--radius-sm);
   }
-  .search-results div{padding:8px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--line-soft);}
+  .search-results div{padding:9px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--line-soft);transition:background-color .12s ease;}
   .search-results div:hover{background:var(--paper-deep);}
   .search-results .sr-code{color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:10px;}
 
   details.import-panel summary{cursor:pointer;font-weight:600;color:var(--ink-soft);font-size:12px;}
   .toast{
     position:fixed;bottom:20px;right:20px;background:var(--ink);color:var(--paper);
-    padding:10px 16px;border-radius:var(--radius);font-size:12px;z-index:50;
-    opacity:0;transform:translateY(8px);transition:opacity .2s, transform .2s;pointer-events:none;
+    padding:11px 18px;border-radius:var(--radius-sm);font-size:12px;z-index:50;
+    box-shadow:var(--shadow-lift);
+    opacity:0;transform:translateY(8px);transition:opacity .25s ease, transform .25s ease;pointer-events:none;
   }
   .toast.show{opacity:1;transform:translateY(0);}
   .chart-box{height:260px;}
   select#filterFund{max-width:220px;}
-  .badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:10px;background:var(--paper-deep);color:var(--ink-soft);margin-left:6px;}
+  .badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:10px;background:var(--paper-deep);color:var(--ink-soft);margin-left:6px;}
 
   /* Portfolio tabs */
   .portfolio-tab{
     display:inline-flex;align-items:center;gap:6px;
-    padding:7px 12px;border-radius:20px;border:1px solid var(--line);
+    padding:8px 14px;border-radius:20px;border:1px solid var(--line);
     background:var(--card);cursor:pointer;font-size:13px;color:var(--ink-soft);
-    user-select:none;
+    user-select:none;box-shadow:var(--shadow-sm);
+    transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease, background-color .25s ease, color .25s ease;
   }
-  .portfolio-tab:hover{border-color:var(--gold);}
-  .portfolio-tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600;}
+  .portfolio-tab:hover{border-color:var(--gold);box-shadow:var(--shadow-md);transform:translateY(-1px);}
+  .portfolio-tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600;box-shadow:var(--shadow-md);}
   .portfolio-tab .tab-icon{background:none;border:none;padding:0 2px;font-size:11px;cursor:pointer;color:inherit;opacity:0.65;line-height:1;}
   .portfolio-tab .tab-icon:hover{opacity:1;}
+
+  /* Page nav (Dashboard / Goal Planner) — styled as proper document tabs, like
+     dividers in a physical ledger book, rather than a text-link filter bar. */
+  .page-nav{
+    display:flex;gap:4px;margin-bottom:0;border-bottom:2px solid var(--ink);
+  }
+  .page-nav-btn{
+    background:var(--paper-deep);border:1px solid var(--line);border-bottom:none;
+    padding:11px 22px;font-family:'Fraunces',Georgia,serif;font-size:15px;font-weight:600;
+    color:var(--ink-soft);cursor:pointer;
+    border-radius:var(--radius) var(--radius) 0 0;
+    position:relative;top:2px;
+    box-shadow:none;
+    transition:background-color .2s ease, color .2s ease, top .2s ease;
+  }
+  .page-nav-btn:hover{color:var(--ink);background:var(--card);filter:none;box-shadow:none;transform:none;}
+  .page-nav-btn.active{
+    background:var(--card);color:var(--ink);top:0;
+    border-color:var(--ink);border-bottom:2px solid var(--card);
+    box-shadow:0 -4px 12px rgba(22,35,61,0.06);filter:none;transform:none;
+  }
 </style>
 </head>
 <body>
+<div class="ambient-graphics" aria-hidden="true">
+  <span class="floater" style="left:2.5%; font-size:26px; animation-duration:24s; animation-delay:-2s;">₹</span>
+  <span class="floater" style="left:6%; font-size:18px; animation-duration:19s; animation-delay:-11s;">₹</span>
+  <span class="floater coin" style="left:4.5%; animation-duration:27s; animation-delay:-18s;"></span>
+  <span class="floater" style="left:1.5%; font-size:34px; animation-duration:31s; animation-delay:-6s;">₹</span>
+  <span class="floater" style="right:2.5%; font-size:22px; animation-duration:22s; animation-delay:-9s;">₹</span>
+  <span class="floater coin" style="right:5.5%; animation-duration:26s; animation-delay:-3s;"></span>
+  <span class="floater" style="right:1.5%; font-size:30px; animation-duration:28s; animation-delay:-15s;">₹</span>
+  <span class="floater" style="right:7%; font-size:16px; animation-duration:18s; animation-delay:-20s;">₹</span>
+</div>
+
 <div class="wrap">
 
   <header class="ledger-header">
@@ -207,24 +355,52 @@
     <button type="button" id="addPortfolioBtn" class="secondary" style="padding:6px 10px;font-size:12px;">+ Add portfolio</button>
   </div>
 
+  <div class="page-nav" style="margin-bottom:22px;">
+    <button type="button" class="page-nav-btn" data-page="dashboard">Dashboard</button>
+    <button type="button" class="page-nav-btn" data-page="goals">Goal Planner</button>
+  </div>
+
   <section class="panel" id="onboardingBanner" style="display:none;border-left:3px solid var(--gold);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
       <div>
-        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin-bottom:8px;color:var(--ink);">Know what your money is actually earning</div>
-        <p style="margin:0;font-size:14px;color:var(--ink-soft);line-height:1.6;max-width:560px;">Upload a statement or add entries by hand — get real XIRR, not a spreadsheet guess. Everything stays on your device, never on a server.</p>
-        <details style="margin-top:10px;">
-          <summary style="cursor:pointer;font-size:12px;color:var(--gold-ink);font-weight:600;">See everything it does</summary>
-          <ul style="margin:10px 0 0;padding-left:18px;font-size:13px;color:var(--ink-soft);line-height:1.8;">
-            <li>Log SIP or lump-sum entries by hand, or <strong style="color:var(--ink);">upload a CAMS/KFintech consolidated statement</strong> to import your history automatically</li>
-            <li><strong style="color:var(--ink);">XIRR, absolute returns, and rolling returns</strong> (3M/1Y/3Y/5Y/10Y) are calculated from your actual transactions, not estimates</li>
-            <li>See how much you invested and what it returned over the <strong style="color:var(--ink);">last 1, 2, or 3 years</strong>, per fund or all together</li>
-            <li>Use the <strong style="color:var(--ink);">Goal planner</strong> to see when you'll reach a target corpus, including step-up SIPs and contribution end dates — mutual funds or other assets like gold and PPF</li>
-            <li>Everything stays on this device — nothing is sent to any server except anonymous fund NAV lookups</li>
-          </ul>
-        </details>
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin-bottom:6px;color:var(--ink);">Know what your money is actually earning</div>
+        <p style="margin:0;font-size:14px;color:var(--ink-soft);line-height:1.6;max-width:600px;">Real XIRR from your actual transactions — not a spreadsheet guess. Everything stays on your device. Here's what you can do:</p>
       </div>
       <button type="button" id="dismissOnboardingBtn" class="secondary" style="padding:4px 11px;font-size:16px;line-height:1;flex-shrink:0;">×</button>
     </div>
+    <div class="showcase-grid">
+      <div class="showcase-card">
+        <div class="showcase-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        <div class="sc-title">Add entries</div>
+        <div class="sc-desc">Log each SIP or lump-sum purchase by hand in seconds.</div>
+      </div>
+      <div class="showcase-card">
+        <div class="showcase-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <div class="sc-title">Upload CAMS statement</div>
+        <div class="sc-desc">Import your whole history from a CAMS/KFintech PDF automatically.</div>
+      </div>
+      <div class="showcase-card">
+        <div class="showcase-icon"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+        <div class="sc-title">See real returns</div>
+        <div class="sc-desc">XIRR, absolute &amp; rolling returns — over any period you pick.</div>
+      </div>
+      <div class="showcase-card">
+        <div class="showcase-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+        <div class="sc-title">Plan your goals</div>
+        <div class="sc-desc">When you'll hit a target, retirement drawdown, required SIP.</div>
+      </div>
+    </div>
+    <details style="margin-top:14px;">
+      <summary style="cursor:pointer;font-size:12px;color:var(--gold-ink);font-weight:600;">More detail on everything</summary>
+      <ul style="margin:10px 0 0;padding-left:18px;font-size:13px;color:var(--ink-soft);line-height:1.8;">
+        <li>Log SIP or lump-sum entries by hand, or <strong style="color:var(--ink);">upload a CAMS/KFintech consolidated statement</strong> to import your history automatically</li>
+        <li><strong style="color:var(--ink);">XIRR, absolute returns, and rolling returns</strong> (3M/1Y/3Y/5Y/10Y) are calculated from your actual transactions, not estimates</li>
+        <li>See how much you invested and what it returned over the <strong style="color:var(--ink);">last 1, 2, or 3 years</strong>, per fund or all together</li>
+        <li>Use the <strong style="color:var(--ink);">Goal planner</strong> to see when you'll reach a target corpus, including step-up SIPs and contribution end dates — mutual funds or other assets like gold and PPF</li>
+        <li>Track <strong style="color:var(--ink);">multiple portfolios</strong> (yourself, family members) separately or combined</li>
+        <li>Everything stays on this device — nothing is sent to any server except anonymous fund NAV lookups</li>
+      </ul>
+    </details>
   </section>
 
   <section class="summary-grid">
@@ -234,8 +410,8 @@
     <div class="card"><div class="label">Total units</div><div class="value num" id="sumUnits">0</div></div>
   </section>
 
-  <section class="panel">
-    <h2>New entry <small>Add a monthly transaction</small></h2>
+  <section class="panel page-dashboard">
+    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>New entry <small>Add a monthly transaction</small></span></h2>
     <div class="form-grid">
       <div class="field search-wrap">
         <label for="fundInput">Fund name</label>
@@ -270,8 +446,8 @@
     <div class="hint" id="entryHint"></div>
   </section>
 
-  <section class="panel">
-    <h2>Funds <small id="fundCountHint"></small></h2>
+  <section class="panel page-dashboard">
+    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Funds <small id="fundCountHint"></small></span></h2>
     <div class="table-scroll">
       <table>
         <thead><tr>
@@ -282,13 +458,20 @@
       </table>
     </div>
     <div class="empty-state" id="fundsEmpty" style="display:none;">
-      <div class="big">No funds yet</div>
+      <div class="empty-illustration"><svg viewBox="0 0 64 64" fill="none">
+        <rect x="10" y="6" width="44" height="52" rx="4" style="stroke:var(--ink-soft);stroke-width:2;"/>
+        <line x1="18" y1="20" x2="46" y2="20" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="30" x2="46" y2="30" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="40" x2="38" y2="40" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <circle cx="46" cy="48" r="7" style="stroke:var(--gold);stroke-width:1.5;stroke-dasharray:2 2;"/>
+      </svg></div>
+            <div class="big">No funds yet</div>
       Add your first entry above, or bulk-import your existing sheet below.
     </div>
   </section>
 
-  <section class="panel">
-    <h2>Rolling returns <small>Point-to-point, as of latest NAV. Under 1Y is absolute; 1Y+ is annualized (CAGR)</small></h2>
+  <section class="panel page-dashboard">
+    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>Rolling returns <small>Point-to-point, as of latest NAV. Under 1Y is absolute; 1Y+ is annualized (CAGR)</small></span></h2>
     <div class="table-scroll">
       <table>
         <thead><tr>
@@ -298,13 +481,20 @@
       </table>
     </div>
     <div class="empty-state" id="rollingEmpty" style="display:none;">
-      <div class="big">No rolling return data yet</div>
+      <div class="empty-illustration"><svg viewBox="0 0 64 64" fill="none">
+        <rect x="10" y="6" width="44" height="52" rx="4" style="stroke:var(--ink-soft);stroke-width:2;"/>
+        <line x1="18" y1="20" x2="46" y2="20" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="30" x2="46" y2="30" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="40" x2="38" y2="40" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <circle cx="46" cy="48" r="7" style="stroke:var(--gold);stroke-width:1.5;stroke-dasharray:2 2;"/>
+      </svg></div>
+            <div class="big">No rolling return data yet</div>
       Click "Refresh NAV" on a fund above (with a valid AMFI code) to pull its NAV history and compute this.
     </div>
   </section>
 
-  <section class="panel">
-    <h2>Period investment &amp; returns <small>How much you actually put in over a window, and what it grew into</small></h2>
+  <section class="panel page-dashboard">
+    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Period investment &amp; returns <small>How much you actually put in over a window, and what it grew into</small></span></h2>
     <div class="form-grid">
       <div class="field">
         <label for="periodFundSelect">Fund</label>
@@ -334,13 +524,13 @@
     </p>
   </section>
 
-  <section class="panel">
-    <h2>Portfolio value <small>Invested vs. current, by fund</small></h2>
+  <section class="panel page-dashboard">
+    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span>Portfolio value <small>Invested vs. current, by fund</small></span></h2>
     <div class="chart-box"><canvas id="fundChart"></canvas></div>
   </section>
 
-  <section class="panel">
-    <h2>Goal planner <small>When you'll hit a target corpus, at each fund's current growth rate</small></h2>
+  <section class="panel page-goals" style="display:none;">
+    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>Goal planner <small>When you'll hit a target corpus, at each fund's current growth rate</small></span></h2>
     <div class="form-grid">
       <div class="field">
         <label for="goalTarget">Target corpus (₹)</label>
@@ -369,7 +559,14 @@
       </table>
     </div>
     <div class="empty-state" id="goalEmpty" style="display:none;">
-      <div class="big">No funds yet</div>
+      <div class="empty-illustration"><svg viewBox="0 0 64 64" fill="none">
+        <rect x="10" y="6" width="44" height="52" rx="4" style="stroke:var(--ink-soft);stroke-width:2;"/>
+        <line x1="18" y1="20" x2="46" y2="20" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="30" x2="46" y2="30" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="40" x2="38" y2="40" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <circle cx="46" cy="48" r="7" style="stroke:var(--gold);stroke-width:1.5;stroke-dasharray:2 2;"/>
+      </svg></div>
+            <div class="big">No funds yet</div>
       Add some entries above first, then set a target here.
     </div>
 
@@ -400,7 +597,14 @@
         </table>
       </div>
       <div class="empty-state" id="assetsEmpty" style="display:none;">
-        No other investments added yet.
+      <div class="empty-illustration"><svg viewBox="0 0 64 64" fill="none">
+        <rect x="10" y="6" width="44" height="52" rx="4" style="stroke:var(--ink-soft);stroke-width:2;"/>
+        <line x1="18" y1="20" x2="46" y2="20" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="30" x2="46" y2="30" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="40" x2="38" y2="40" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <circle cx="46" cy="48" r="7" style="stroke:var(--gold);stroke-width:1.5;stroke-dasharray:2 2;"/>
+      </svg></div>
+              No other investments added yet.
       </div>
     </div>
 
@@ -459,9 +663,38 @@
     </p>
   </section>
 
-  <section class="panel">
+  <section class="panel page-goals" style="display:none;">
+    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>How much should I invest monthly? <small>Reverse calculator — target amount, timeframe, and return rate → required SIP</small></span></h2>
+    <div class="form-grid">
+      <div class="field">
+        <label for="reverseTarget">Target amount (₹)</label>
+        <input id="reverseTarget" type="number" step="1000" class="num-input" placeholder="e.g. 2000000">
+      </div>
+      <div class="field">
+        <label for="reverseYears">Time to achieve it (years)</label>
+        <input id="reverseYears" type="number" step="0.5" min="0.5" class="num-input" placeholder="e.g. 5">
+      </div>
+      <div class="field">
+        <label for="reverseRate">Assumed annual return (%)</label>
+        <input id="reverseRate" type="number" step="0.5" class="num-input" value="12">
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:12px;">
+      <div class="field">
+        <label for="reverseStarting">Already invested toward this goal (₹, optional)</label>
+        <input id="reverseStarting" type="number" step="1000" class="num-input" value="0" placeholder="0">
+      </div>
+      <div class="field"><label>&nbsp;</label><button type="button" id="reverseCalcBtn">Calculate</button></div>
+    </div>
+    <div id="reverseResult" style="margin-top:16px;"></div>
+    <p class="hint" style="margin-top:12px;">
+      Assumes you invest at the end of each month and the return compounds monthly at the rate you enter — the same convention the Goal Planner above uses, so the two stay consistent with each other. Change the return rate to see how sensitive the required monthly amount is to your assumption.
+    </p>
+  </section>
+
+  <section class="panel page-dashboard">
     <h2>
-      Transaction ledger
+      <span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>Transaction ledger</span>
       <select id="filterFund"><option value="">All funds</option></select>
     </h2>
     <div class="table-scroll">
@@ -474,14 +707,21 @@
       </table>
     </div>
     <div class="empty-state" id="ledgerEmpty" style="display:none;">
-      <div class="big">No transactions yet</div>
+      <div class="empty-illustration"><svg viewBox="0 0 64 64" fill="none">
+        <rect x="10" y="6" width="44" height="52" rx="4" style="stroke:var(--ink-soft);stroke-width:2;"/>
+        <line x1="18" y1="20" x2="46" y2="20" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="30" x2="46" y2="30" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <line x1="18" y1="40" x2="38" y2="40" style="stroke:var(--line);stroke-width:2;stroke-dasharray:3 3;"/>
+        <circle cx="46" cy="48" r="7" style="stroke:var(--gold);stroke-width:1.5;stroke-dasharray:2 2;"/>
+      </svg></div>
+            <div class="big">No transactions yet</div>
       Your entries will show up here as a running ledger.
     </div>
   </section>
 
-  <section class="panel">
+  <section class="panel page-dashboard">
     <details class="import-panel" open>
-      <summary>Bulk import from your existing spreadsheet, backup &amp; export</summary>
+      <summary style="display:flex;align-items:center;gap:12px;"><span class="icon-badge" style="width:32px;height:32px;border-radius:9px;"><svg viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>Bulk import from your existing spreadsheet, backup &amp; export</summary>
       <div style="margin-top:14px;">
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
@@ -621,8 +861,16 @@
       try{ localStorage.setItem('mf_onboarding_dismissed', 'true'); }catch(e){}
     });
     $('aboutBtn').addEventListener('click', ()=>{
-      $('onboardingBanner').style.display = 'block';
-      $('onboardingBanner').scrollIntoView({behavior:'smooth', block:'start'});
+      const banner = $('onboardingBanner');
+      banner.style.display = 'block';
+      // Restart the card entrance animation each time it's reopened (CSS
+      // animations only auto-play on first appearance).
+      banner.querySelectorAll('.showcase-card').forEach(card=>{
+        card.style.animation = 'none';
+        void card.offsetWidth; // force reflow so the animation can restart
+        card.style.animation = '';
+      });
+      banner.scrollIntoView({behavior:'smooth', block:'start'});
     });
   })();
 
@@ -1284,6 +1532,54 @@
       </tr>`).join('');
   }
   $('simulateWithdrawalBtn').addEventListener('click', renderWithdrawalSim);
+
+  // ---------- Reverse SIP calculator ----------
+  // Standard future-value-of-annuity math, solved backwards for the monthly
+  // contribution: FV = starting*(1+r)^n + P*[((1+r)^n - 1)/r]. Uses the same
+  // "invest at month end" convention as the forward Goal Planner simulation
+  // above, so the two tools stay consistent with each other.
+  function calculateRequiredSIP(target, years, annualRatePct, startingAmount){
+    const n = Math.round(years*12);
+    const r = Math.pow(1+annualRatePct/100, 1/12) - 1;
+    const futureValueOfStarting = startingAmount * Math.pow(1+r, n);
+    const remaining = target - futureValueOfStarting;
+    let monthlyRequired;
+    if(Math.abs(r) < 1e-9){
+      monthlyRequired = remaining>0 ? remaining/n : 0;
+    } else {
+      const annuityFactor = (Math.pow(1+r,n)-1)/r;
+      monthlyRequired = remaining>0 ? remaining/annuityFactor : 0;
+    }
+    return { monthlyRequired: Math.max(monthlyRequired,0), alreadyEnough: remaining<=0, futureValueOfStarting, n };
+  }
+
+  $('reverseCalcBtn').addEventListener('click', ()=>{
+    const target = parseFloat($('reverseTarget').value);
+    const years = parseFloat($('reverseYears').value);
+    const ratePct = parseFloat($('reverseRate').value);
+    const starting = parseFloat($('reverseStarting').value) || 0;
+    const resultEl = $('reverseResult');
+    if(!target || target<=0){ resultEl.innerHTML = '<p class="hint warn">Enter a target amount first.</p>'; return; }
+    if(!years || years<=0){ resultEl.innerHTML = '<p class="hint warn">Enter how many years you have to reach it.</p>'; return; }
+    if(isNaN(ratePct)){ resultEl.innerHTML = '<p class="hint warn">Enter an assumed annual return.</p>'; return; }
+
+    const calc = calculateRequiredSIP(target, years, ratePct, starting);
+    if(calc.alreadyEnough){
+      resultEl.innerHTML = `
+        <div class="card" style="border-color:var(--green);">
+          <div class="label">You're already on track</div>
+          <div class="value pos" style="font-size:20px;">No extra investment needed</div>
+          <div class="hint" style="margin-top:4px;">Your existing ${fmtMoney(starting)}, growing at ${ratePct}% for ${years} year${years===1?'':'s'}, is projected to reach ${fmtMoney(calc.futureValueOfStarting)} on its own — already at or beyond your ${fmtMoney(target)} target.</div>
+        </div>`;
+    } else {
+      resultEl.innerHTML = `
+        <div class="card" style="border-color:var(--gold);">
+          <div class="label">You need to invest approximately</div>
+          <div class="value" style="font-size:24px;color:var(--gold-ink);font-family:'IBM Plex Mono',monospace;">${fmtMoney(calc.monthlyRequired)}<span style="font-size:13px;color:var(--ink-soft);font-family:'Inter',sans-serif;"> / month</span></div>
+          <div class="hint" style="margin-top:4px;">For ${years} year${years===1?'':'s'}, assuming ${ratePct}% annual returns${starting>0?`, on top of your existing ${fmtMoney(starting)}`:''}, to reach ${fmtMoney(target)}.</div>
+        </div>`;
+    }
+  });
 
   // ---------- Period investment & returns ----------
   function renderPeriodFundSelect(){
@@ -2276,6 +2572,22 @@
     toast('Data cleared');
   });
 
+  // ---------- Page navigation (Dashboard / Goal Planner) ----------
+  function showPage(page){
+    if(page!=='dashboard' && page!=='goals') page = 'dashboard';
+    document.querySelectorAll('.page-dashboard').forEach(el=>{ el.style.display = page==='dashboard' ? '' : 'none'; });
+    document.querySelectorAll('.page-goals').forEach(el=>{ el.style.display = page==='goals' ? '' : 'none'; });
+    document.querySelectorAll('.page-nav-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.getAttribute('data-page')===page);
+    });
+    if(location.hash.replace('#','') !== page) location.hash = page;
+    window.scrollTo({top:0, behavior:'auto'});
+  }
+  document.querySelectorAll('.page-nav-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> showPage(btn.getAttribute('data-page')));
+  });
+  window.addEventListener('hashchange', ()=> showPage(location.hash.replace('#','')));
+
   // ---------- Init ----------
   (async function init(){
     $('dateInput').valueAsDate = new Date();
@@ -2285,6 +2597,7 @@
       const savedAge = localStorage.getItem('mf_current_age');
       if(savedAge) $('currentAgeInput').value = savedAge;
     }catch(e){}
+    showPage(location.hash.replace('#',''));
   })();
   $('currentAgeInput').addEventListener('change', ()=>{
     try{ localStorage.setItem('mf_current_age', $('currentAgeInput').value); }catch(e){}
