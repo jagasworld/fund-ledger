@@ -276,7 +276,7 @@
       <table>
         <thead><tr>
           <th>Scheme</th><th>Code</th><th class="right">Invested</th><th class="right">Units</th>
-          <th class="right">Latest NAV</th><th class="right">Current value</th><th class="right">Return</th><th></th>
+          <th class="right">Latest NAV<br><span style="font-weight:400;text-transform:none;font-size:9px;">(editable)</span></th><th class="right">Current value</th><th class="right">Return</th><th></th>
         </tr></thead>
         <tbody id="fundsTbody"></tbody>
       </table>
@@ -347,6 +347,10 @@
         <input id="goalTarget" type="number" step="1000" class="num-input" placeholder="e.g. 5000000">
       </div>
       <div class="field">
+        <label for="currentAgeInput">Your current age (optional)</label>
+        <input id="currentAgeInput" type="number" step="1" min="1" max="100" class="num-input" placeholder="e.g. 38">
+      </div>
+      <div class="field">
         <label>&nbsp;</label>
         <button type="button" id="calcGoalBtn">Calculate</button>
       </div>
@@ -402,6 +406,50 @@
 
     <div id="goalResult" style="margin-top:16px;"></div>
     <div class="chart-box" id="goalChartBox" style="display:none;margin-top:12px;"><canvas id="goalChart"></canvas></div>
+
+    <div id="withdrawalSection" style="display:none;margin-top:22px;padding-top:16px;border-top:1px solid var(--line-soft);">
+      <h2 style="font-size:14px;margin-bottom:10px;">Retirement withdrawal simulator <small>Once you reach your target, how long will it last?</small></h2>
+      <div class="form-grid">
+        <div class="field">
+          <label for="withdrawRatePct">Annual withdrawal rate (%)</label>
+          <input type="number" id="withdrawRatePct" class="num-input" value="4" step="0.5" min="0">
+        </div>
+        <div class="field">
+          <label for="postRetGrowthPct">Growth rate in retirement (%)</label>
+          <input type="number" id="postRetGrowthPct" class="num-input" value="8" step="0.5">
+        </div>
+        <div class="field">
+          <label for="postRetInflationPct">Assumed inflation (%)</label>
+          <input type="number" id="postRetInflationPct" class="num-input" value="6" step="0.5">
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top:12px;">
+        <div class="field">
+          <label for="lumpSumAmount">One-time lump sum withdrawal (₹)</label>
+          <input type="number" id="lumpSumAmount" class="num-input" value="0" step="10000" min="0" placeholder="For a big expense, optional">
+        </div>
+        <div class="field">
+          <label for="lumpSumYear">In retirement year</label>
+          <input type="number" id="lumpSumYear" class="num-input" value="1" step="1" min="1">
+        </div>
+        <div class="field"><label>&nbsp;</label><button type="button" id="simulateWithdrawalBtn">Simulate</button></div>
+      </div>
+
+      <div id="withdrawalResult" style="margin-top:16px;"></div>
+      <div class="table-scroll" id="withdrawalTableWrap" style="margin-top:14px;display:none;">
+        <table>
+          <thead><tr>
+            <th>Year</th><th class="right">Starting balance</th><th class="right">Withdrawal</th>
+            <th class="right">Lump sum</th><th class="right">Growth</th><th class="right">Ending balance</th>
+          </tr></thead>
+          <tbody id="withdrawalTbody"></tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin-top:12px;">
+        The withdrawal starts at your chosen rate applied to the corpus at retirement, then rises with assumed inflation each year after (the standard "4% rule" shape) — not a fixed percentage of the shrinking or growing balance each year.
+        This is a projection assuming steady growth and inflation, not a guarantee.
+      </p>
+    </div>
 
     <p class="hint" style="margin-top:14px;">
       "Assumed annual return" defaults to each fund's XIRR-to-date, but you can type a different number to test a scenario.
@@ -514,6 +562,11 @@
   const fmtMoney = n => '₹' + (n||0).toLocaleString('en-IN', {maximumFractionDigits:0});
   const fmtNum = (n, d=4) => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toLocaleString('en-IN', {minimumFractionDigits:d, maximumFractionDigits:d});
   const fmtDate = iso => { const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); };
+  function ordinalSuffix(n){
+    const rem100 = n % 100;
+    if(rem100>=11 && rem100<=13) return 'th';
+    switch(n % 10){ case 1: return 'st'; case 2: return 'nd'; case 3: return 'rd'; default: return 'th'; }
+  }
   const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 
   function toast(msg){
@@ -822,7 +875,7 @@
         </td>
         <td class="right num">${fmtMoney(s.invested)}</td>
         <td class="right num">${fmtNum(s.units,3)}</td>
-        <td class="right num">${s.latestNav?fmtNum(s.latestNav,2):'—'}</td>
+        <td class="right"><input type="number" step="0.0001" class="num-input" style="width:90px;text-align:right;" value="${s.latestNav||''}" placeholder="0.00" data-latestnav-fund="${f.id}"></td>
         <td class="right num">${fmtMoney(s.current)}</td>
         <td class="right num ${s.ret>=0?'pos':(s.ret<0?'neg':'')}">${s.ret===null?'—':(s.ret>=0?'+':'')+s.ret.toFixed(2)+'%'}</td>
         <td class="row-actions">
@@ -1079,6 +1132,8 @@
   }
 
   let goalChart = null;
+  let lastReachedCorpus = null; // corpus amount once the goal is reached, feeds the withdrawal simulator below
+  let lastReachedMonths = null; // months from today until retirement, needed to compute age/year at each later milestone
   $('calcGoalBtn').addEventListener('click', ()=>{
     const target = parseFloat($('goalTarget').value);
     const resultEl = $('goalResult');
@@ -1093,16 +1148,25 @@
     const sim = simulateGoal(target);
     const currentTotal = portfolioTotals().current + activeAssets().reduce((s,a)=>s+(a.currentValue||0),0);
 
+    const currentAge = parseFloat($('currentAgeInput').value);
+    const hasAge = !isNaN(currentAge) && currentAge>0;
+
     if(sim.reached){
       const reachDate = addMonths(new Date(), sim.months);
       const years = Math.floor(sim.months/12), rem = sim.months%12;
       const durationStr = years>0 ? `${years}y ${rem}m` : `${rem} months`;
+      const ageAtRetirement = hasAge ? Math.round(currentAge + sim.months/12) : null;
+      const ageNote = ageAtRetirement!=null ? ` — around your ${ageAtRetirement}${ordinalSuffix(ageAtRetirement)} year` : '';
       resultEl.innerHTML = `
         <div class="card" style="border-color:var(--green);">
-          <div class="label">Projected to reach ₹${target.toLocaleString('en-IN')}</div>
-          <div class="value pos" style="font-size:20px;">${reachDate.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div>
-          <div class="hint" style="margin-top:4px;">≈ ${durationStr} from now, starting at today's value of ${fmtMoney(currentTotal)}.</div>
+          <div class="label">Estimated retirement date <span style="text-transform:none;">(reaching ₹${target.toLocaleString('en-IN')})</span></div>
+          <div class="value pos" style="font-size:20px;">${reachDate.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}${ageNote}</div>
+          <div class="hint" style="margin-top:4px;">≈ ${durationStr} from now, starting at today's value of ${fmtMoney(currentTotal)}. Approximate — actual markets won't move this smoothly.</div>
         </div>`;
+      lastReachedCorpus = target;
+      lastReachedMonths = sim.months;
+      $('withdrawalSection').style.display = 'block';
+      renderWithdrawalSim();
     }else{
       resultEl.innerHTML = `
         <div class="card" style="border-color:var(--rust);">
@@ -1110,6 +1174,9 @@
           <div class="value neg" style="font-size:20px;">${fmtMoney(sim.finalTotal)} projected</div>
           <div class="hint" style="margin-top:4px;">Try a higher monthly/yearly contribution, or a longer time horizon.</div>
         </div>`;
+      lastReachedCorpus = null;
+      lastReachedMonths = null;
+      $('withdrawalSection').style.display = 'none';
     }
     if(zeroRateFunds.length){
       resultEl.innerHTML += `<p class="hint warn" style="margin-top:8px;">${zeroRateFunds.length} fund(s) have no XIRR yet (no return history) and are being projected at 0% growth — contributions only. Set an assumed return manually if you want a more realistic estimate.</p>`;
@@ -1139,6 +1206,84 @@
       }
     });
   });
+
+  // ---------- Retirement withdrawal simulator ----------
+  // Runs year by year from the corpus reached above: grows the balance,
+  // subtracts a withdrawal (starting at withdrawRatePct% of the corpus,
+  // then rising with inflation each year — the standard "4% rule" shape),
+  // and optionally subtracts a one-time lump sum in a chosen year for a
+  // big planned or unplanned expense. Reports how many years the corpus
+  // survives, or if it doesn't deplete within 60 years at all.
+  function simulateWithdrawal(startingCorpus, growthPct, inflationPct, withdrawRatePct, lumpSum, lumpSumYear, maxYears=60){
+    let balance = startingCorpus;
+    let withdrawal = startingCorpus * (withdrawRatePct/100);
+    const rows = [];
+    let depleted = false;
+    for(let year=1; year<=maxYears; year++){
+      if(balance<=0){ depleted=true; break; }
+      const startBalance = balance;
+      const thisLumpSum = (year===lumpSumYear && lumpSum>0) ? lumpSum : 0;
+      const afterGrowth = startBalance*(1+growthPct/100);
+      const growthAmount = afterGrowth - startBalance;
+      const endBalance = afterGrowth - withdrawal - thisLumpSum;
+      rows.push({year, startBalance, withdrawal, lumpSum:thisLumpSum, growth:growthAmount, endBalance: Math.max(endBalance,0)});
+      if(endBalance<=0){ depleted=true; balance=0; break; }
+      balance = endBalance;
+      withdrawal *= (1+inflationPct/100);
+    }
+    return {rows, depleted, yearsLasted: rows.length};
+  }
+
+  function renderWithdrawalSim(){
+    if(lastReachedCorpus==null) return;
+    const growthPct = parseFloat($('postRetGrowthPct').value) || 0;
+    const inflationPct = parseFloat($('postRetInflationPct').value) || 0;
+    const withdrawRatePct = parseFloat($('withdrawRatePct').value) || 4;
+    const lumpSum = parseFloat($('lumpSumAmount').value) || 0;
+    const lumpSumYear = parseInt($('lumpSumYear').value, 10) || 1;
+    const sim = simulateWithdrawal(lastReachedCorpus, growthPct, inflationPct, withdrawRatePct, lumpSum, lumpSumYear);
+    const initialWithdrawal = lastReachedCorpus * (withdrawRatePct/100);
+    const resultEl = $('withdrawalResult');
+    const lumpSumNote = lumpSum>0 ? `, plus a one-time ${fmtMoney(lumpSum)} withdrawal in year ${lumpSumYear}` : '';
+
+    // Age and calendar year at the milestone, when a current age was given.
+    // Retirement itself lands lastReachedMonths from today; the withdrawal
+    // years then run forward from that point.
+    const currentAge = parseFloat($('currentAgeInput').value);
+    const hasAge = !isNaN(currentAge) && currentAge>0 && lastReachedMonths!=null;
+    const milestoneDate = addMonths(new Date(), (lastReachedMonths||0) + sim.yearsLasted*12);
+    const milestoneYear = milestoneDate.getFullYear();
+    const ageAtMilestone = hasAge ? Math.round(currentAge + (lastReachedMonths||0)/12 + sim.yearsLasted) : null;
+    const milestoneNote = ageAtMilestone!=null ? `, at your ${ageAtMilestone}${ordinalSuffix(ageAtMilestone)} year, in ${milestoneYear}` : ` (in ${milestoneYear})`;
+
+    if(sim.depleted){
+      resultEl.innerHTML = `
+        <div class="card" style="border-color:var(--rust);">
+          <div class="label">Corpus is projected to run out after</div>
+          <div class="value neg" style="font-size:20px;">${sim.yearsLasted} year${sim.yearsLasted===1?'':'s'}${milestoneNote}</div>
+          <div class="hint" style="margin-top:4px;">Starting withdrawal ${fmtMoney(initialWithdrawal)} in year 1, rising with inflation each year${lumpSumNote}.</div>
+        </div>`;
+    } else {
+      resultEl.innerHTML = `
+        <div class="card" style="border-color:var(--green);">
+          <div class="label">Corpus lasts at least</div>
+          <div class="value pos" style="font-size:20px;">${sim.yearsLasted}+ years${milestoneNote}</div>
+          <div class="hint" style="margin-top:4px;">Growth is outpacing withdrawals at this rate — starting withdrawal ${fmtMoney(initialWithdrawal)} in year 1${lumpSumNote}.</div>
+        </div>`;
+    }
+
+    $('withdrawalTableWrap').style.display = 'block';
+    $('withdrawalTbody').innerHTML = sim.rows.map(r=>`
+      <tr>
+        <td class="num">${r.year}</td>
+        <td class="right num">${fmtMoney(r.startBalance)}</td>
+        <td class="right num">${fmtMoney(r.withdrawal)}</td>
+        <td class="right num">${r.lumpSum>0?fmtMoney(r.lumpSum):'—'}</td>
+        <td class="right num pos">+${fmtMoney(r.growth)}</td>
+        <td class="right num">${fmtMoney(r.endBalance)}</td>
+      </tr>`).join('');
+  }
+  $('simulateWithdrawalBtn').addEventListener('click', renderWithdrawalSim);
 
   // ---------- Period investment & returns ----------
   function renderPeriodFundSelect(){
@@ -1261,18 +1406,33 @@
   }
 
   // ---------- mfapi.in integration (best-effort; falls back gracefully) ----------
+  // fetch() has no built-in timeout — if a server accepts the connection but
+  // never responds (common when a service is degraded/overloaded, as opposed
+  // to cleanly erroring), the browser will wait indefinitely. That looked to
+  // the user like "nothing happens" with no error at all. This wraps fetch
+  // with a hard timeout so it always fails predictably instead of hanging.
+  async function fetchWithTimeout(url, ms=12000){
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), ms);
+    try{
+      return await fetch(url, {signal: controller.signal});
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function searchSchemes(query){
     try{
-      const res = await fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(query));
+      const res = await fetchWithTimeout('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(query));
       if(!res.ok) throw new Error('bad response');
       return await res.json();
     }catch(e){
-      return null; // network blocked in this environment or offline
+      return null; // network blocked, timed out, or the NAV service is having issues
     }
   }
   async function fetchNavHistory(code){
     try{
-      const res = await fetch('https://api.mfapi.in/mf/' + encodeURIComponent(code));
+      const res = await fetchWithTimeout('https://api.mfapi.in/mf/' + encodeURIComponent(code));
       if(!res.ok) throw new Error('bad response');
       const data = await res.json();
       return data.data || null;
@@ -1282,7 +1442,7 @@
   }
   async function fetchSchemeDetail(code){
     try{
-      const res = await fetch('https://api.mfapi.in/mf/' + encodeURIComponent(code));
+      const res = await fetchWithTimeout('https://api.mfapi.in/mf/' + encodeURIComponent(code));
       if(!res.ok) throw new Error('bad response');
       return await res.json(); // { meta: {isin_growth, isin_div_reinvestment, ...}, data: [...] }
     }catch(e){
@@ -1482,11 +1642,21 @@
   });
   $('fundsTbody').addEventListener('change', async (e)=>{
     const fundId = e.target.getAttribute('data-code-fund');
+    const navFundId = e.target.getAttribute('data-latestnav-fund');
     if(fundId){
       const f = funds.find(x=>x.id===fundId);
       f.code = e.target.value.trim();
       await save();
       toast('Scheme code updated');
+    }
+    if(navFundId){
+      const f = funds.find(x=>x.id===navFundId);
+      const val = parseFloat(e.target.value);
+      f.latestNav = (val>0) ? val : 0;
+      f.latestNavDate = new Date().toISOString().slice(0,10);
+      await save();
+      renderAll();
+      toast(`${f.name}: NAV updated manually to ₹${f.latestNav}`);
     }
   });
   $('ledgerTbody').addEventListener('click', async (e)=>{
@@ -2111,7 +2281,14 @@
     $('dateInput').valueAsDate = new Date();
     await load();
     renderAll();
+    try{
+      const savedAge = localStorage.getItem('mf_current_age');
+      if(savedAge) $('currentAgeInput').value = savedAge;
+    }catch(e){}
   })();
+  $('currentAgeInput').addEventListener('change', ()=>{
+    try{ localStorage.setItem('mf_current_age', $('currentAgeInput').value); }catch(e){}
+  });
 
   // Register the service worker (only works when served over http(s), not from
   // a local file:// path — harmless no-op otherwise).
