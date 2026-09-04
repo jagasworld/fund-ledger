@@ -15,323 +15,257 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root{
-    --paper: #F1EEE5;
-    --paper-deep: #E7E2D3;
-    --card: #FBFAF6;
-    --ink: #16233D;
-    --ink-soft: #57627A;
-    --gold: #B98A1E;
-    --gold-ink: #8C6A16;
-    --green: #2F6F4F;
-    --green-bg: #E4EEE8;
-    --rust: #A33B2E;
-    --rust-bg: #F3E4E1;
-    --line: #CBC4AF;
-    --line-soft: #DFDACB;
-    --ledger-line: rgba(22,35,61,0.028);
-    --radius: 10px;
-    --radius-sm: 6px;
-    --shadow-sm: 0 1px 2px rgba(22,35,61,0.05), 0 1px 1px rgba(22,35,61,0.04);
-    --shadow-md: 0 6px 20px rgba(22,35,61,0.08), 0 2px 6px rgba(22,35,61,0.05);
-    --shadow-lift: 0 14px 36px rgba(22,35,61,0.14), 0 4px 10px rgba(22,35,61,0.08);
+    --paper: #FCFBF9;
+    --paper-deep: #F4F2ED;
+    --card: #FCFBF9;
+    --ink: #1A1A1A;
+    --ink-soft: #6B6B6B;
+    --gold: #1B4D3E;
+    --gold-ink: #1B4D3E;
+    --green: #1B6B4A;
+    --green-bg: #EAF1ED;
+    --rust: #A3341F;
+    --rust-bg: #F5E7E2;
+    --line: #E5E3DE;
+    --line-soft: #ECEAE4;
+    --ledger-line: rgba(0,0,0,0);
+    --radius: 0px;
+    --radius-sm: 0px;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lift: 0 12px 40px rgba(26,26,26,0.10);
   }
   [data-theme="dark"]{
-    --paper: #191C24;
-    --paper-deep: #21252F;
-    --card: #20242E;
-    --ink: #EBE7DC;
-    --ink-soft: #9B96A3;
-    --gold: #D8AE4A;
-    --gold-ink: #E8C46B;
-    --green: #55B98A;
-    --green-bg: #1D3129;
-    --rust: #E07D68;
-    --rust-bg: #3A241F;
-    --line: #383C48;
-    --line-soft: #2A2E38;
-    --ledger-line: rgba(235,231,220,0.035);
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.25), 0 1px 1px rgba(0,0,0,0.2);
-    --shadow-md: 0 6px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
-    --shadow-lift: 0 14px 36px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.3);
+    --paper: #14150F;
+    --paper-deep: #1C1E16;
+    --card: #14150F;
+    --ink: #EDEBE2;
+    --ink-soft: #9C998C;
+    --gold: #7FB89E;
+    --gold-ink: #96CBAF;
+    --green: #6FB894;
+    --green-bg: #17251E;
+    --rust: #D98266;
+    --rust-bg: #2E1D18;
+    --line: #2E3026;
+    --line-soft: #24261D;
+    --ledger-line: rgba(0,0,0,0);
+    --shadow-lift: 0 12px 40px rgba(0,0,0,0.5);
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{
     margin:0;
-    background:
-      repeating-linear-gradient(180deg, var(--ledger-line) 0px, var(--ledger-line) 1px, transparent 1px, transparent 29px),
-      var(--paper);
+    background:var(--paper);
     color:var(--ink);
     font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size:14px;
-    line-height:1.5;
-    padding:32px 20px 80px;
-    transition:background-color .35s ease, color .35s ease;
+    font-size:15px;
+    line-height:1.6;
+    padding:0 0 100px;
+    transition:background-color .4s ease, color .4s ease;
+    -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:1080px;margin:0 auto;position:relative;z-index:1;}
-
-  /* Ambient floating graphics — sit in the empty margins beside the content
-     column, never over it. Only shown where there's actually room (wide
-     viewports) and never for anyone who's asked for reduced motion. */
-  .ambient-graphics{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;display:none;}
-  @media (min-width:1360px){ .ambient-graphics{display:block;} }
-  @media (prefers-reduced-motion: reduce){ .ambient-graphics{display:none !important;} }
-  .floater{
-    position:absolute;bottom:-10vh;
-    font-family:'Fraunces',serif;font-weight:600;color:var(--gold);
-    opacity:0;user-select:none;line-height:1;
-    animation-name:floatUp;animation-timing-function:linear;animation-iteration-count:infinite;
-  }
-  .floater.coin{
-    width:24px;height:24px;border-radius:50%;border:2px dashed var(--gold);color:transparent;
-  }
-  @keyframes floatUp{
-    0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0;}
-    8%{opacity:0.38;}
-    92%{opacity:0.38;}
-    100%{transform:translateY(-125vh) translateX(24px) rotate(16deg);opacity:0;}
-  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 32px;position:relative;}
   .num{font-family:'IBM Plex Mono', 'SF Mono', Menlo, monospace;font-variant-numeric:tabular-nums;}
   :focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;scroll-behavior:auto !important;}
   }
 
-  /* Header */
+  /* Header — editorial masthead */
   header.ledger-header{
-    display:flex;justify-content:space-between;align-items:flex-start;
-    position:relative;
-    border-bottom:2px solid var(--ink);
-    padding-bottom:22px;margin-bottom:28px;gap:20px;flex-wrap:wrap;
-    overflow:visible;
+    display:flex;justify-content:space-between;align-items:flex-end;
+    padding:56px 0 28px;margin-bottom:0;gap:24px;flex-wrap:wrap;
+    border-bottom:1px solid var(--ink);
   }
   .header-ornament{display:none;}
   header.ledger-header h1{
     font-family:'Fraunces', Georgia, serif;
-    font-weight:600;font-size:36px;margin:0 0 6px;letter-spacing:-0.015em;color:var(--ink);
+    font-weight:600;font-size:44px;margin:0 0 8px;letter-spacing:-0.02em;color:var(--ink);line-height:1;
   }
-  header.ledger-header p{margin:0;color:var(--ink-soft);font-size:13.5px;}
+  header.ledger-header p{margin:0;color:var(--ink-soft);font-size:15px;max-width:60ch;}
   .seal{
-    width:96px;height:96px;border-radius:50%;
-    border:2px dashed var(--gold);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    transform:rotate(-7deg);flex-shrink:0;position:relative;
-    color:var(--gold-ink);
-    filter:drop-shadow(0 6px 14px rgba(185,138,30,0.22));
-    animation:sealSettle .6s cubic-bezier(.2,.9,.3,1.2) both;
+    display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;color:var(--ink);
+    text-align:right;
   }
-  .seal::after{
-    content:'';position:absolute;inset:7px;border-radius:50%;
-    border:1px dashed var(--gold);opacity:0.45;
-  }
-  @keyframes sealSettle{
-    0%{opacity:0;transform:rotate(6deg) scale(0.85);}
-    100%{opacity:1;transform:rotate(-7deg) scale(1);}
-  }
-  .seal .seal-label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;}
-  .seal .seal-val{font-family:'Fraunces',serif;font-weight:700;font-size:22px;margin-top:2px;}
+  .seal::after{display:none;}
+  .seal .seal-label{font-size:11px;color:var(--ink-soft);font-family:'Inter',sans-serif;letter-spacing:0;text-transform:none;}
+  .seal .seal-val{font-family:'Fraunces',serif;font-weight:600;font-size:30px;margin-top:2px;line-height:1;letter-spacing:-0.01em;}
 
-  /* Panel entrance — a quiet, orchestrated settle-in rather than everything
-     appearing at once. Re-plays naturally when switching between Dashboard
-     and Goal Planner, since hidden (display:none) panels re-enter the render
-     tree each time. */
-  .panel{animation:panelIn .5s cubic-bezier(.16,.84,.44,1) both;}
-  @keyframes panelIn{
-    0%{opacity:0;transform:translateY(10px);}
-    100%{opacity:1;transform:translateY(0);}
-  }
-  .wrap > section:nth-of-type(1){animation-delay:0s;}
-  .wrap > section:nth-of-type(2){animation-delay:.05s;}
-  .wrap > section:nth-of-type(3){animation-delay:.1s;}
-  .wrap > section:nth-of-type(4){animation-delay:.15s;}
-  .wrap > section:nth-of-type(5){animation-delay:.2s;}
-  .wrap > section:nth-of-type(6){animation-delay:.25s;}
-  .wrap > section:nth-of-type(n+7){animation-delay:.3s;}
+  /* No per-section entrance animations — a single quiet page settle instead. */
+  .panel{animation:none;}
+  @keyframes panelIn{to{opacity:1;transform:none;}}
 
-  /* Summary cards */
-  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
+  /* Summary — hero figure treatment, not four equal boxes */
+  .summary-grid{
+    display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0;
+    margin:36px 0 48px;border-bottom:1px solid var(--line);
+  }
   .card{
-    background:var(--card);border:1px solid var(--line-soft);border-radius:var(--radius);
-    padding:16px 18px;box-shadow:var(--shadow-sm);
-    transition:box-shadow .25s ease, transform .25s ease, background-color .35s ease, border-color .35s ease;
+    background:transparent;border:none;border-radius:0;
+    padding:8px 24px 28px 0;
+    transition:none;
   }
-  .card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
-  .card .label{font-size:10px;text-transform:uppercase;letter-spacing:0.09em;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
-  .card .value{font-family:'IBM Plex Mono',monospace;font-size:23px;font-weight:600;margin-top:7px;color:var(--ink);}
+  .card:not(:first-child){padding-left:24px;border-left:1px solid var(--line);}
+  .card:hover{box-shadow:none;transform:none;}
+  .card .label{font-size:12px;text-transform:none;letter-spacing:0;color:var(--ink-soft);font-family:'Inter',sans-serif;}
+  .card .value{font-family:'Fraunces',serif;font-size:26px;font-weight:600;margin-top:8px;color:var(--ink);letter-spacing:-0.01em;}
+  .card:first-child .value{font-size:44px;line-height:1.05;}
   .card .value.pos{color:var(--green);}
   .card .value.neg{color:var(--rust);}
 
-  /* Panels */
+  /* Sections — separated by air and hairlines, not boxes */
   .panel{
-    background:var(--card);border:1px solid var(--line-soft);border-radius:var(--radius);
-    padding:22px 24px;margin-bottom:20px;box-shadow:var(--shadow-sm);
-    transition:background-color .35s ease, border-color .35s ease;
+    background:transparent;border:none;border-radius:0;
+    padding:0;margin-bottom:56px;box-shadow:none;
   }
   .panel h2{
-    font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:18px;margin:0 0 16px;
-    padding-bottom:12px;border-bottom:1px solid var(--line-soft);color:var(--ink);
-    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:26px;margin:0 0 20px;
+    padding-bottom:0;border-bottom:none;color:var(--ink);letter-spacing:-0.015em;
+    display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
   }
-  .panel h2 small{font-family:'Inter',sans-serif;font-weight:400;font-size:11px;color:var(--ink-soft);text-transform:none;letter-spacing:0;}
-  .h2-title{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-  .icon-badge{
-    width:38px;height:38px;border-radius:11px;flex-shrink:0;
-    background:linear-gradient(135deg, var(--gold), var(--green));
-    display:flex;align-items:center;justify-content:center;
-    box-shadow:var(--shadow-sm);
-  }
-  .icon-badge svg{width:19px;height:19px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .panel h2 small{font-family:'Inter',sans-serif;font-weight:400;font-size:13px;color:var(--ink-soft);text-transform:none;letter-spacing:0;max-width:48ch;text-align:right;}
 
   /* Form */
-  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end;}
-  .field{display:flex;flex-direction:column;gap:5px;}
-  .field label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;align-items:end;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12px;text-transform:none;letter-spacing:0;color:var(--ink-soft);}
   input,select,textarea{
-    font-family:'Inter',sans-serif;font-size:13px;
-    border:1px solid var(--line);border-radius:var(--radius-sm);
-    padding:9px 10px;background:var(--card);color:var(--ink);
-    transition:border-color .2s ease, box-shadow .2s ease, background-color .35s ease;
+    font-family:'Inter',sans-serif;font-size:14px;
+    border:none;border-bottom:1px solid var(--line);border-radius:0;
+    padding:8px 2px;background:transparent;color:var(--ink);
+    transition:border-color .2s ease;
   }
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(185,138,30,0.18);}
+  input:focus,select:focus,textarea:focus{outline:none;border-bottom-color:var(--gold);box-shadow:none;}
   input.num-input{font-family:'IBM Plex Mono',monospace;}
+  textarea{border:1px solid var(--line);padding:10px;}
   button{
-    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:500;
     border:1px solid var(--ink);background:var(--ink);color:var(--paper);
-    padding:9px 16px;border-radius:var(--radius-sm);cursor:pointer;
-    box-shadow:var(--shadow-sm);
-    transition:box-shadow .2s ease, transform .15s ease, filter .2s ease;
+    padding:10px 20px;border-radius:0;cursor:pointer;box-shadow:none;
+    transition:opacity .2s ease;letter-spacing:0.01em;
   }
-  button:hover{filter:brightness(1.15);box-shadow:var(--shadow-md);transform:translateY(-1px);}
-  button:active{transform:translateY(0);}
+  button:hover{opacity:0.82;box-shadow:none;transform:none;filter:none;}
+  button:active{transform:none;}
   button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none;}
-  button.secondary:hover{background:var(--paper-deep);box-shadow:var(--shadow-sm);}
-  button.link-btn{background:none;border:none;color:var(--gold-ink);font-weight:500;padding:4px 6px;text-decoration:underline;cursor:pointer;font-size:12px;box-shadow:none;}
-  button.link-btn:hover{filter:none;box-shadow:none;transform:none;opacity:0.75;}
-  button.danger-link{background:none;border:none;color:var(--rust);padding:4px 6px;cursor:pointer;font-size:12px;text-decoration:underline;box-shadow:none;}
-  button.danger-link:hover{filter:none;box-shadow:none;transform:none;opacity:0.75;}
-  button:disabled{opacity:0.5;cursor:not-allowed;transform:none !important;}
-  .row-actions{display:flex;gap:6px;}
-  .hint{font-size:11px;color:var(--ink-soft);margin-top:8px;}
+  button.secondary:hover{background:transparent;border-color:var(--ink);box-shadow:none;}
+  button.link-btn{background:none;border:none;color:var(--gold-ink);font-weight:500;padding:4px 0;text-decoration:none;border-bottom:1px solid var(--gold-ink);cursor:pointer;font-size:13px;box-shadow:none;border-radius:0;}
+  button.link-btn:hover{filter:none;box-shadow:none;transform:none;opacity:0.65;}
+  button.danger-link{background:none;border:none;color:var(--rust);padding:4px 0;cursor:pointer;font-size:13px;text-decoration:none;border-bottom:1px solid transparent;box-shadow:none;}
+  button.danger-link:hover{filter:none;box-shadow:none;transform:none;border-bottom-color:var(--rust);}
+  button:disabled{opacity:0.4;cursor:not-allowed;}
+  .row-actions{display:flex;gap:14px;}
+  .hint{font-size:12.5px;color:var(--ink-soft);margin-top:10px;line-height:1.55;}
   .hint.warn{color:var(--rust);}
   .hint.ok{color:var(--green);}
 
-  /* Tables */
-  table{width:100%;border-collapse:collapse;font-size:13px;}
+  /* Tables — editorial, ruled not boxed */
+  table{width:100%;border-collapse:collapse;font-size:14px;}
   th{
-    text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;
-    color:var(--ink-soft);border-bottom:1.5px solid var(--ink);padding:8px;font-weight:600;
-    background:var(--paper-deep);
+    text-align:left;font-size:12px;text-transform:none;letter-spacing:0;
+    color:var(--ink-soft);border-bottom:1px solid var(--ink);padding:10px 8px;font-weight:500;
+    background:transparent;
   }
-  th:first-child{border-top-left-radius:var(--radius-sm);}
-  th:last-child{border-top-right-radius:var(--radius-sm);}
-  td{padding:9px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
-  tbody tr{transition:background-color .12s ease;}
+  th:first-child,th:last-child{border-radius:0;}
+  td{padding:12px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
+  tbody tr{transition:none;}
   tbody tr:hover{background:var(--paper-deep);}
   .right{text-align:right;}
-  .table-scroll{overflow-x:auto;border-radius:var(--radius-sm);}
+  .table-scroll{overflow-x:auto;border-radius:0;}
   .fund-name{font-weight:600;}
   .fund-code{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
   .pos{color:var(--green);}
   .neg{color:var(--rust);}
-  .empty-state{padding:36px 10px;text-align:center;color:var(--ink-soft);}
-  .empty-state .big{font-family:'Fraunces',serif;font-size:16px;color:var(--ink);margin-bottom:4px;}
-  .empty-illustration{width:64px;height:64px;margin:0 auto 12px;opacity:0.55;}
+  .empty-state{padding:48px 10px;text-align:center;color:var(--ink-soft);}
+  .empty-state .big{font-family:'Fraunces',serif;font-size:20px;color:var(--ink);margin-bottom:6px;}
+  .empty-illustration{width:56px;height:56px;margin:0 auto 16px;opacity:0.4;}
   .empty-illustration svg{width:100%;height:100%;}
-
-  /* Capability showcase (onboarding) */
-  .showcase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px;}
-  .showcase-card{
-    background:var(--paper-deep);border:1px solid var(--line-soft);border-radius:var(--radius);
-    padding:16px 14px;text-align:center;
-    opacity:0;transform:translateY(12px);
-    animation:showcaseIn .55s cubic-bezier(.16,.84,.44,1) both;
-    transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
-  }
-  .showcase-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--gold);}
-  .showcase-card:nth-child(1){animation-delay:.15s;}
-  .showcase-card:nth-child(2){animation-delay:.28s;}
-  .showcase-card:nth-child(3){animation-delay:.41s;}
-  .showcase-card:nth-child(4){animation-delay:.54s;}
-  @keyframes showcaseIn{to{opacity:1;transform:translateY(0);}}
-  .showcase-icon{
-    width:46px;height:46px;margin:0 auto 10px;border-radius:13px;
-    background:linear-gradient(135deg, var(--gold), var(--green));
-    display:flex;align-items:center;justify-content:center;
-    box-shadow:var(--shadow-sm);
-  }
-  .showcase-icon svg{width:23px;height:23px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-  .showcase-card .sc-title{font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--ink);margin-bottom:4px;}
-  .showcase-card .sc-desc{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
 
   /* Search results dropdown */
   .search-wrap{position:relative;}
   .search-results{
-    position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--line);
+    position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--ink);
     border-top:none;max-height:220px;overflow-y:auto;z-index:20;box-shadow:var(--shadow-lift);
-    border-radius:0 0 var(--radius-sm) var(--radius-sm);
+    border-radius:0;
   }
-  .search-results div{padding:9px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--line-soft);transition:background-color .12s ease;}
+  .search-results div{padding:10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line-soft);transition:background-color .12s ease;}
   .search-results div:hover{background:var(--paper-deep);}
   .search-results .sr-code{color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:10px;}
 
-  details.import-panel summary{cursor:pointer;font-weight:600;color:var(--ink-soft);font-size:12px;}
+  details.import-panel summary{cursor:pointer;font-weight:500;color:var(--ink-soft);font-size:13px;}
   .toast{
-    position:fixed;bottom:20px;right:20px;background:var(--ink);color:var(--paper);
-    padding:11px 18px;border-radius:var(--radius-sm);font-size:12px;z-index:50;
+    position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--paper);
+    padding:13px 20px;border-radius:0;font-size:13px;z-index:50;
     box-shadow:var(--shadow-lift);
     opacity:0;transform:translateY(8px);transition:opacity .25s ease, transform .25s ease;pointer-events:none;
   }
   .toast.show{opacity:1;transform:translateY(0);}
-  .chart-box{height:260px;}
+  .chart-box{height:280px;}
   select#filterFund{max-width:220px;}
-  .badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:10px;background:var(--paper-deep);color:var(--ink-soft);margin-left:6px;}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:0;background:var(--paper-deep);color:var(--ink-soft);margin-left:6px;border:1px solid var(--line);}
 
-  /* Portfolio tabs */
-  .portfolio-tab{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:8px 14px;border-radius:20px;border:1px solid var(--line);
-    background:var(--card);cursor:pointer;font-size:13px;color:var(--ink-soft);
-    user-select:none;box-shadow:var(--shadow-sm);
-    transition:box-shadow .2s ease, transform .2s ease, border-color .2s ease, background-color .25s ease, color .25s ease;
+  /* Capability showcase (onboarding) — editorial list, not gradient tiles */
+  .showcase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0;margin-top:24px;border-top:1px solid var(--line);}
+  .showcase-card{
+    background:transparent;border:none;border-radius:0;
+    padding:22px 22px 22px 0;text-align:left;
+    border-bottom:1px solid var(--line);
+    opacity:0;animation:showcaseIn .5s ease both;
+    transition:none;
   }
-  .portfolio-tab:hover{border-color:var(--gold);box-shadow:var(--shadow-md);transform:translateY(-1px);}
-  .portfolio-tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600;box-shadow:var(--shadow-md);}
-  .portfolio-tab .tab-icon{background:none;border:none;padding:0 2px;font-size:11px;cursor:pointer;color:inherit;opacity:0.65;line-height:1;}
+  .showcase-card:not(:nth-child(4n+1)){padding-left:22px;border-left:1px solid var(--line);}
+  .showcase-card:hover{transform:none;box-shadow:none;border-color:var(--line);}
+  .showcase-card:nth-child(1){animation-delay:.1s;}
+  .showcase-card:nth-child(2){animation-delay:.18s;}
+  .showcase-card:nth-child(3){animation-delay:.26s;}
+  .showcase-card:nth-child(4){animation-delay:.34s;}
+  @keyframes showcaseIn{to{opacity:1;}}
+  .showcase-icon{display:none;}
+  .showcase-card .sc-title{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);margin-bottom:6px;}
+  .showcase-card .sc-desc{font-size:13px;color:var(--ink-soft);line-height:1.5;}
+
+  /* Portfolio tabs — understated editorial */
+  .portfolio-tab{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 0;border:none;border-bottom:2px solid transparent;border-radius:0;
+    background:transparent;cursor:pointer;font-size:14px;color:var(--ink-soft);
+    user-select:none;box-shadow:none;margin-right:22px;
+    transition:color .2s ease, border-color .2s ease;
+  }
+  .portfolio-tab:hover{border-color:var(--line);box-shadow:none;transform:none;color:var(--ink);}
+  .portfolio-tab.active{background:transparent;color:var(--ink);border-bottom-color:var(--gold);font-weight:600;box-shadow:none;}
+  .portfolio-tab .tab-icon{background:none;border:none;padding:0 1px;font-size:12px;cursor:pointer;color:inherit;opacity:0.5;line-height:1;}
   .portfolio-tab .tab-icon:hover{opacity:1;}
 
-  /* Page nav (Dashboard / Goal Planner) — styled as proper document tabs, like
-     dividers in a physical ledger book, rather than a text-link filter bar. */
-  .page-nav{
-    display:flex;gap:4px;margin-bottom:0;border-bottom:2px solid var(--ink);
-  }
+  /* Page nav — editorial section switch, understated */
+  .page-nav{display:flex;gap:28px;margin-bottom:0;border-bottom:1px solid var(--line);}
   .page-nav-btn{
-    background:var(--paper-deep);border:1px solid var(--line);border-bottom:none;
-    padding:11px 22px;font-family:'Fraunces',Georgia,serif;font-size:15px;font-weight:600;
-    color:var(--ink-soft);cursor:pointer;
-    border-radius:var(--radius) var(--radius) 0 0;
-    position:relative;top:2px;
-    box-shadow:none;
-    transition:background-color .2s ease, color .2s ease, top .2s ease;
+    background:transparent;border:none;border-bottom:2px solid transparent;
+    padding:12px 0;font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:600;
+    color:var(--ink-soft);cursor:pointer;border-radius:0;position:relative;top:1px;box-shadow:none;
+    transition:color .2s ease, border-color .2s ease;
   }
-  .page-nav-btn:hover{color:var(--ink);background:var(--card);filter:none;box-shadow:none;transform:none;}
+  .page-nav-btn:hover{color:var(--ink);background:transparent;filter:none;box-shadow:none;transform:none;}
   .page-nav-btn.active{
-    background:var(--card);color:var(--ink);top:0;
-    border-color:var(--ink);border-bottom:2px solid var(--card);
-    box-shadow:0 -4px 12px rgba(22,35,61,0.06);filter:none;transform:none;
+    background:transparent;color:var(--ink);border-bottom:2px solid var(--gold);
+    box-shadow:none;filter:none;transform:none;
+  }
+
+  @media (max-width:720px){
+    .wrap{padding:0 20px;}
+    header.ledger-header{padding:36px 0 22px;}
+    header.ledger-header h1{font-size:34px;}
+    .summary-grid{grid-template-columns:1fr 1fr;}
+    .card{padding:14px 16px 14px 0 !important;border-left:none !important;}
+    .card:first-child{grid-column:1 / -1;border-bottom:1px solid var(--line);padding-bottom:20px !important;}
+    .card:first-child .value{font-size:38px;}
+    .showcase-card{padding-left:0 !important;border-left:none !important;}
+    .panel h2{font-size:22px;}
+    .panel h2 small{text-align:left;}
   }
 </style>
 </head>
 <body>
-<div class="ambient-graphics" aria-hidden="true">
-  <span class="floater" style="left:2.5%; font-size:26px; animation-duration:24s; animation-delay:-2s;">₹</span>
-  <span class="floater" style="left:6%; font-size:18px; animation-duration:19s; animation-delay:-11s;">₹</span>
-  <span class="floater coin" style="left:4.5%; animation-duration:27s; animation-delay:-18s;"></span>
-  <span class="floater" style="left:1.5%; font-size:34px; animation-duration:31s; animation-delay:-6s;">₹</span>
-  <span class="floater" style="right:2.5%; font-size:22px; animation-duration:22s; animation-delay:-9s;">₹</span>
-  <span class="floater coin" style="right:5.5%; animation-duration:26s; animation-delay:-3s;"></span>
-  <span class="floater" style="right:1.5%; font-size:30px; animation-duration:28s; animation-delay:-15s;">₹</span>
-  <span class="floater" style="right:7%; font-size:16px; animation-duration:18s; animation-delay:-20s;">₹</span>
-</div>
 
 <div class="wrap">
 
@@ -404,14 +338,14 @@
   </section>
 
   <section class="summary-grid">
-    <div class="card"><div class="label">Invested</div><div class="value num" id="sumInvested">₹0</div></div>
     <div class="card"><div class="label">Current value</div><div class="value num" id="sumCurrent">₹0</div></div>
+    <div class="card"><div class="label">Invested</div><div class="value num" id="sumInvested">₹0</div></div>
     <div class="card"><div class="label">Net profit</div><div class="value num" id="sumProfit">₹0</div></div>
     <div class="card"><div class="label">Total units</div><div class="value num" id="sumUnits">0</div></div>
   </section>
 
   <section class="panel page-dashboard">
-    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>New entry <small>Add a monthly transaction</small></span></h2>
+    <h2>New entry <small>Add a monthly transaction</small></h2>
     <div class="form-grid">
       <div class="field search-wrap">
         <label for="fundInput">Fund name</label>
@@ -447,7 +381,7 @@
   </section>
 
   <section class="panel page-dashboard">
-    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>Funds <small id="fundCountHint"></small></span></h2>
+    <h2>Funds <small id="fundCountHint"></small></h2>
     <div class="table-scroll">
       <table>
         <thead><tr>
@@ -471,7 +405,7 @@
   </section>
 
   <section class="panel page-dashboard">
-    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>Rolling returns <small>Point-to-point, as of latest NAV. Under 1Y is absolute; 1Y+ is annualized (CAGR)</small></span></h2>
+    <h2>Rolling returns <small>Point-to-point, as of latest NAV. Under 1Y is absolute; 1Y+ is annualized (CAGR)</small></h2>
     <div class="table-scroll">
       <table>
         <thead><tr>
@@ -494,7 +428,7 @@
   </section>
 
   <section class="panel page-dashboard">
-    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Period investment &amp; returns <small>How much you actually put in over a window, and what it grew into</small></span></h2>
+    <h2>Period investment &amp; returns <small>How much you actually put in over a window, and what it grew into</small></h2>
     <div class="form-grid">
       <div class="field">
         <label for="periodFundSelect">Fund</label>
@@ -525,12 +459,12 @@
   </section>
 
   <section class="panel page-dashboard">
-    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span>Portfolio value <small>Invested vs. current, by fund</small></span></h2>
+    <h2>Portfolio value <small>Invested vs. current, by fund</small></h2>
     <div class="chart-box"><canvas id="fundChart"></canvas></div>
   </section>
 
   <section class="panel page-goals" style="display:none;">
-    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>Goal planner <small>When you'll hit a target corpus, at each fund's current growth rate</small></span></h2>
+    <h2>Goal planner <small>When you'll hit a target corpus, at each fund's current growth rate</small></h2>
     <div class="form-grid">
       <div class="field">
         <label for="goalTarget">Target corpus (₹)</label>
@@ -664,7 +598,7 @@
   </section>
 
   <section class="panel page-goals" style="display:none;">
-    <h2><span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>How much should I invest monthly? <small>Reverse calculator — target amount, timeframe, and return rate → required SIP</small></span></h2>
+    <h2>How much should I invest monthly? <small>Reverse calculator — target amount, timeframe, and return rate → required SIP</small></h2>
     <div class="form-grid">
       <div class="field">
         <label for="reverseTarget">Target amount (₹)</label>
@@ -694,7 +628,7 @@
 
   <section class="panel page-dashboard">
     <h2>
-      <span class="h2-title"><span class="icon-badge"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>Transaction ledger</span>
+      Transaction ledger
       <select id="filterFund"><option value="">All funds</option></select>
     </h2>
     <div class="table-scroll">
@@ -721,7 +655,7 @@
 
   <section class="panel page-dashboard">
     <details class="import-panel" open>
-      <summary style="display:flex;align-items:center;gap:12px;"><span class="icon-badge" style="width:32px;height:32px;border-radius:9px;"><svg viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>Bulk import from your existing spreadsheet, backup &amp; export</summary>
+      <summary>Bulk import from your existing spreadsheet, backup &amp; export</summary>
       <div style="margin-top:14px;">
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
@@ -778,8 +712,30 @@
     </details>
   </section>
 
+  <section class="panel page-dashboard">
+    <h2>Feedback <small>Sign in with GitHub to leave a comment</small></h2>
+    <div id="giscus-container">
+      <script src="https://giscus.app/client.js"
+        data-repo="jagasworld/fund-ledger"
+        data-repo-id="REPLACE_WITH_REPO_ID"
+        data-category="General"
+        data-category-id="REPLACE_WITH_CATEGORY_ID"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="light"
+        data-lang="en"
+        crossorigin="anonymous"
+        async>
+      </script>
+    </div>
+    <p class="hint" style="margin-top:14px;">Comments are stored in this project's GitHub Discussions. You'll need a free GitHub account to post.</p>
+  </section>
+
   <footer style="text-align:center;padding:18px 0 6px;">
-    <img src="https://hits.sh/wealthledger.in.svg?style=flat&label=visits&color=B98A1E&labelColor=16233D" alt="visitor count" style="opacity:0.85;">
+    <img src="https://hits.sh/wealthledger.in.svg?style=flat&label=visits&color=1B4D3E&labelColor=1A1A1A" alt="visitor count" style="opacity:0.85;">
   </footer>
 
 </div>
@@ -837,6 +793,14 @@
     // Chart.js bakes colors in at creation time, so re-render to pick up the new palette.
     renderChart();
     if($('goalChartBox').style.display !== 'none' && $('goalTarget').value) $('calcGoalBtn').click();
+    // Keep the Giscus comments widget's theme in sync, if it's loaded.
+    try{
+      const frame = document.querySelector('iframe.giscus-frame');
+      if(frame) frame.contentWindow.postMessage(
+        { giscus: { setConfig: { theme: theme==='dark' ? 'dark' : 'light' } } },
+        'https://giscus.app'
+      );
+    }catch(e){}
   }
   function getInitialTheme(){
     try{
@@ -1717,33 +1681,58 @@
     }
   }
 
-  async function searchSchemes(query){
+  // ---------- Tigzig MF NAV API integration ----------
+  // mfapi.in has been unreliable during AMFI's 2026 data-format transition, so
+  // NAV fetching now runs through Tigzig's MF NAV API instead (status:
+  // status.tigzig.com — verified operational, 99.5%+ uptime). Its response
+  // shape is genuinely different from mfapi.in's (ISO dates, oldest-first,
+  // snake_case field names, ISIN included directly on the NAV response), so
+  // everything below adapts Tigzig's real shape back into the exact legacy
+  // shape (DD-MM-YYYY strings, newest-first, schemeCode/schemeName,
+  // meta.isin_growth/isin_div_reinvestment) that the rest of this app was
+  // built around — rolling returns, "NAV as of a date", and scheme matching
+  // all keep working completely unchanged.
+  async function fetchTigzigScheme(code){
     try{
-      const res = await fetchWithTimeout('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(query));
+      const res = await fetchWithTimeout('https://api.tigzig.com/mf/v1/nav?scheme=' + encodeURIComponent(code));
       if(!res.ok) throw new Error('bad response');
       return await res.json();
+    }catch(e){
+      return null;
+    }
+  }
+  function tigzigToLegacyHistory(tigzig){
+    if(!tigzig || !Array.isArray(tigzig.data)) return null;
+    // Tigzig returns oldest-first with ISO dates ("2013-01-03"); the app's
+    // existing logic expects newest-first with "DD-MM-YYYY" strings.
+    return tigzig.data.slice().reverse().map(row=>{
+      const [y,m,d] = String(row.date).split('-');
+      return {date: `${d}-${m}-${y}`, nav: String(row.nav)};
+    });
+  }
+
+  async function searchSchemes(query){
+    try{
+      const res = await fetchWithTimeout('https://api.tigzig.com/mf/v1/search?q=' + encodeURIComponent(query));
+      if(!res.ok) throw new Error('bad response');
+      const json = await res.json();
+      const results = Array.isArray(json.results) ? json.results : [];
+      return results.map(r=>({schemeCode: r.scheme_code, schemeName: r.scheme_name, isin: r.isin, isin2: r.isin2}));
     }catch(e){
       return null; // network blocked, timed out, or the NAV service is having issues
     }
   }
   async function fetchNavHistory(code){
-    try{
-      const res = await fetchWithTimeout('https://api.mfapi.in/mf/' + encodeURIComponent(code));
-      if(!res.ok) throw new Error('bad response');
-      const data = await res.json();
-      return data.data || null;
-    }catch(e){
-      return null;
-    }
+    const tigzig = await fetchTigzigScheme(code);
+    return tigzigToLegacyHistory(tigzig);
   }
   async function fetchSchemeDetail(code){
-    try{
-      const res = await fetchWithTimeout('https://api.mfapi.in/mf/' + encodeURIComponent(code));
-      if(!res.ok) throw new Error('bad response');
-      return await res.json(); // { meta: {isin_growth, isin_div_reinvestment, ...}, data: [...] }
-    }catch(e){
-      return null;
-    }
+    const tigzig = await fetchTigzigScheme(code);
+    if(!tigzig) return null;
+    return {
+      meta: { isin_growth: tigzig.isin || null, isin_div_reinvestment: tigzig.isin2 || null },
+      data: tigzigToLegacyHistory(tigzig)
+    };
   }
   // Tries to find the correct AMFI scheme code for a fund automatically, so the
   // person never has to search and type it in themselves.
@@ -1757,6 +1746,10 @@
     if(!results || !results.length) return {candidates: results||[]};
     const candidates = results.slice(0, 8);
     if(fund.isin){
+      // Tigzig's search results already carry ISINs, so check those directly
+      // first — confident matches need no extra requests at all.
+      const directMatch = candidates.find(c => c.isin === fund.isin || c.isin2 === fund.isin);
+      if(directMatch) return {code:String(directMatch.schemeCode), history:(await fetchNavHistory(directMatch.schemeCode)), candidates};
       for(const c of candidates){
         const detail = await fetchSchemeDetail(c.schemeCode);
         if(!detail || !detail.meta) continue;
