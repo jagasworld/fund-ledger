@@ -394,11 +394,14 @@
   .empty-state{padding:42px 16px;border:1px dashed var(--line);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.45),transparent);}
   .empty-state .big{font-size:22px;}
   .showcase-grid{gap:12px;margin-top:18px;border-top:0;}
-  .showcase-card{padding:18px;border:1px solid var(--line)!important;border-radius:16px!important;background:linear-gradient(180deg,var(--card),var(--paper-deep));box-shadow:var(--shadow-sm);}
+  .showcase-card{padding:18px;border:1px solid var(--line)!important;border-radius:16px!important;background:linear-gradient(180deg,var(--card),var(--paper-deep));box-shadow:var(--shadow-sm);position:relative;cursor:pointer;text-align:left;color:var(--ink);}
   .showcase-card:not(:nth-child(4n+1)){padding-left:18px;border-left:1px solid var(--line)!important;}
-  .showcase-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
-  .showcase-card .sc-title{font-size:18px;}
-  .showcase-card .sc-desc{font-size:13px;}
+  .showcase-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:rgba(27,77,62,.38)!important;}
+  .showcase-card:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
+  .showcase-card::after{content:'Open →';position:absolute;right:16px;bottom:14px;font-size:11px;font-weight:700;color:var(--gold-ink);opacity:.72;transition:transform .18s ease,opacity .18s ease;}
+  .showcase-card:hover::after{transform:translateX(3px);opacity:1;}
+  .showcase-card .sc-title{font-size:18px;padding-right:58px;}
+  .showcase-card .sc-desc{font-size:13px;padding-right:8px;}
   .onboarding-card{}
   details.import-panel{background:transparent;}
   details.import-panel summary{padding:4px 0;font-size:14px;color:var(--ink);font-weight:700;}
@@ -472,22 +475,22 @@
       <button type="button" id="dismissOnboardingBtn" class="secondary" style="padding:4px 11px;font-size:16px;line-height:1;flex-shrink:0;">×</button>
     </div>
     <div class="showcase-grid">
-      <div class="showcase-card">
+      <div class="showcase-card" role="link" tabindex="0" data-showcase-target="new-entry-section" aria-label="Go to New entry">
         <div class="showcase-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
         <div class="sc-title">Add entries</div>
         <div class="sc-desc">Log each SIP or lump-sum purchase by hand in seconds.</div>
       </div>
-      <div class="showcase-card">
+      <div class="showcase-card" role="link" tabindex="0" data-showcase-target="import-section" aria-label="Go to import and backup">
         <div class="showcase-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
         <div class="sc-title">Upload CAMS statement</div>
         <div class="sc-desc">Import your whole history from a CAMS/KFintech PDF automatically.</div>
       </div>
-      <div class="showcase-card">
+      <div class="showcase-card" role="link" tabindex="0" data-showcase-target="rolling-returns-section" aria-label="Go to rolling returns">
         <div class="showcase-icon"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
         <div class="sc-title">See real returns</div>
         <div class="sc-desc">XIRR, absolute &amp; rolling returns — over any period you pick.</div>
       </div>
-      <div class="showcase-card">
+      <div class="showcase-card" role="link" tabindex="0" data-showcase-target="goal-planner-section" aria-label="Go to Goal Planner">
         <div class="showcase-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
         <div class="sc-title">Plan your goals</div>
         <div class="sc-desc">When you'll hit a target, retirement drawdown, required SIP.</div>
@@ -513,7 +516,7 @@
     <div class="card"><div class="label">Total units</div><div class="value num" id="sumUnits">0</div></div>
   </section>
 
-  <section class="panel page-dashboard">
+  <section class="panel page-dashboard" id="new-entry-section">
     <h2>New entry <small>Add a monthly transaction</small></h2>
     <div class="form-grid">
       <div class="field search-wrap">
@@ -573,7 +576,7 @@
     </div>
   </section>
 
-  <section class="panel page-dashboard">
+  <section class="panel page-dashboard" id="rolling-returns-section">
     <h2>Rolling returns <small>Point-to-point, as of latest NAV. Under 1Y is absolute; 1Y+ is annualized (CAGR)</small></h2>
     <div class="table-scroll">
       <table>
@@ -632,7 +635,7 @@
     <div class="chart-box"><canvas id="fundChart"></canvas></div>
   </section>
 
-  <section class="panel page-goals" style="display:none;">
+  <section class="panel page-goals" id="goal-planner-section" style="display:none;">
     <h2>Goal planner <small>When you'll hit a target corpus, at each fund's current growth rate</small></h2>
     <div class="form-grid">
       <div class="field">
@@ -822,7 +825,7 @@
     </div>
   </section>
 
-  <section class="panel page-dashboard">
+  <section class="panel page-dashboard" id="import-section">
     <details class="import-panel" open>
       <summary>Bulk import from your existing spreadsheet, backup &amp; export</summary>
       <div style="margin-top:14px;">
@@ -884,21 +887,7 @@
   <section class="panel page-dashboard">
     <h2>Feedback <small>Sign in with GitHub to leave a comment</small></h2>
     <div id="giscus-container">
-      <script src="https://giscus.app/client.js"
-        data-repo="jagasworld/fund-ledger"
-        data-repo-id="REPLACE_WITH_REPO_ID"
-        data-category="General"
-        data-category-id="REPLACE_WITH_CATEGORY_ID"
-        data-mapping="pathname"
-        data-strict="0"
-        data-reactions-enabled="1"
-        data-emit-metadata="0"
-        data-input-position="top"
-        data-theme="light"
-        data-lang="en"
-        crossorigin="anonymous"
-        async>
-      </script>
+      <div class="hint" id="giscus-placeholder" style="margin:0;">Feedback loads on the live website.</div>
     </div>
     <p class="hint" style="margin-top:14px;">Comments are stored in this project's GitHub Discussions. You'll need a free GitHub account to post.</p>
   </section>
@@ -2751,7 +2740,7 @@
   });
 
   // ---------- Page navigation (Dashboard / Goal Planner) ----------
-  function showPage(page){
+  function showPage(page, targetId){
     if(page!=='dashboard' && page!=='goals') page = 'dashboard';
     document.querySelectorAll('.page-dashboard').forEach(el=>{ el.style.display = page==='dashboard' ? '' : 'none'; });
     document.querySelectorAll('.page-goals').forEach(el=>{ el.style.display = page==='goals' ? '' : 'none'; });
@@ -2759,12 +2748,79 @@
       btn.classList.toggle('active', btn.getAttribute('data-page')===page);
     });
     if(location.hash.replace('#','') !== page) location.hash = page;
-    window.scrollTo({top:0, behavior:'auto'});
+    if(targetId){
+      requestAnimationFrame(()=>{
+        const target = $(targetId);
+        if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    }else{
+      window.scrollTo({top:0, behavior:'auto'});
+    }
   }
   document.querySelectorAll('.page-nav-btn').forEach(btn=>{
     btn.addEventListener('click', ()=> showPage(btn.getAttribute('data-page')));
   });
+
+  // ---------- Clickable onboarding shortcuts ----------
+  function activateShowcaseShortcut(card){
+    const targetId = card && card.getAttribute('data-showcase-target');
+    if(!targetId) return;
+    const isGoal = targetId === 'goal-planner-section';
+    showPage(isGoal ? 'goals' : 'dashboard', targetId);
+  }
+  document.querySelectorAll('.showcase-card[data-showcase-target]').forEach(card=>{
+    card.addEventListener('click', ()=> activateShowcaseShortcut(card));
+    card.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        activateShowcaseShortcut(card);
+      }
+    });
+  });
+
   window.addEventListener('hashchange', ()=> showPage(location.hash.replace('#','')));
+
+  // ---------- Feedback / Giscus ----------
+  // Only load Giscus on the real hosted app. ChatGPT Preview, local file://
+  // previews, and other sandboxed environments stay network-free so they do not
+  // trigger a browser permission prompt for https://giscus.app.
+  function loadGiscusOnLiveSite(){
+    const liveHost =
+      location.hostname === 'wealthledger.in' ||
+      location.hostname === 'www.wealthledger.in' ||
+      location.hostname.endsWith('.github.io');
+    const placeholder = $('giscus-placeholder');
+    if(!liveHost){
+      if(placeholder){
+        placeholder.textContent = 'Feedback is available on the live Wealth Ledger website.';
+      }
+      return;
+    }
+
+    if(placeholder) placeholder.textContent = 'Loading feedback…';
+    const script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.setAttribute('data-repo', 'jagasworld/fund-ledger');
+    script.setAttribute('data-repo-id', 'REPLACE_WITH_REPO_ID');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'REPLACE_WITH_CATEGORY_ID');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'top');
+    script.setAttribute('data-theme', 'light');
+    script.setAttribute('data-lang', 'en');
+    script.setAttribute('crossorigin', 'anonymous');
+    script.async = true;
+
+    const container = $('giscus-container');
+    if(container){
+      container.innerHTML = '';
+      container.appendChild(script);
+    }
+  }
+  loadGiscusOnLiveSite();
 
   // ---------- Init ----------
   (async function init(){
