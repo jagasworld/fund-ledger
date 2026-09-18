@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wealth Ledger</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#16233D">
+<meta name="theme-color" content="#182A4C">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180-apple.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -263,6 +263,175 @@
     .panel h2{font-size:22px;}
     .panel h2 small{text-align:left;}
   }
+
+  /* ================= MODERN UI OVERRIDES ================= */
+  :root{
+    --paper:#F4F7FB;
+    --paper-deep:#EAF0F7;
+    --card:#FFFFFF;
+    --ink:#14213D;
+    --ink-soft:#667085;
+    --gold:#C6922E;
+    --gold-ink:#A8751B;
+    --green:#16845B;
+    --green-bg:#E8F6EF;
+    --rust:#C44F3D;
+    --rust-bg:#FCECE8;
+    --line:#DDE5EF;
+    --line-soft:#ECF0F5;
+    --ledger-line:rgba(20,33,61,.045);
+    --radius:20px;
+    --radius-sm:12px;
+    --shadow-sm:0 6px 20px rgba(20,33,61,.06);
+    --shadow-md:0 14px 38px rgba(20,33,61,.10);
+    --shadow-lift:0 18px 50px rgba(20,33,61,.16);
+  }
+  [data-theme="dark"]{
+    --paper:#0D1424;
+    --paper-deep:#131E32;
+    --card:#111B2E;
+    --ink:#F5F7FB;
+    --ink-soft:#A6B0C4;
+    --gold:#E0B45B;
+    --gold-ink:#E8C574;
+    --green:#66D19A;
+    --green-bg:#123126;
+    --rust:#F08472;
+    --rust-bg:#321B1A;
+    --line:#26344D;
+    --line-soft:#1C2940;
+    --ledger-line:rgba(255,255,255,.035);
+    --shadow-sm:0 8px 24px rgba(0,0,0,.18);
+    --shadow-md:0 16px 40px rgba(0,0,0,.24);
+    --shadow-lift:0 24px 60px rgba(0,0,0,.34);
+  }
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(198,146,46,.13), transparent 26%),
+      radial-gradient(circle at 92% 12%, rgba(43,96,168,.10), transparent 28%),
+      linear-gradient(180deg,var(--paper) 0%,var(--paper-deep) 100%);
+    padding-bottom:56px;
+  }
+  body::before, body::after{
+    content:"";position:fixed;z-index:-1;pointer-events:none;border-radius:999px;filter:blur(8px);
+  }
+  body::before{width:280px;height:280px;left:-140px;top:38%;background:rgba(198,146,46,.07);}
+  body::after{width:360px;height:360px;right:-180px;top:62%;background:rgba(49,103,181,.06);}
+  .wrap{max-width:1180px;padding:0 28px;}
+  header.ledger-header{
+    position:relative;overflow:hidden;align-items:center;margin:22px 0 16px;padding:34px 34px 32px;
+    border:1px solid rgba(255,255,255,.55);border-radius:28px;
+    background:
+      radial-gradient(circle at 90% 20%, rgba(255,255,255,.16), transparent 22%),
+      linear-gradient(135deg,#182A4C 0%,#203F70 58%,#2B547C 100%);
+    color:#fff;box-shadow:var(--shadow-md);
+  }
+  header.ledger-header::before{
+    content:"";position:absolute;inset:auto -50px -90px auto;width:250px;height:250px;border-radius:50%;
+    background:rgba(198,146,46,.16);filter:blur(2px);
+  }
+  header.ledger-header h1{position:relative;color:#fff;font-size:50px;letter-spacing:-.04em;margin-bottom:10px;}
+  header.ledger-header p{position:relative;color:rgba(255,255,255,.78);font-size:15px;max-width:66ch;}
+  header.ledger-header>div:last-child{position:relative;}
+  .seal{padding:13px 16px 12px;border:1px solid rgba(255,255,255,.22);border-radius:16px;background:rgba(255,255,255,.08);backdrop-filter:blur(10px);min-width:118px;}
+  .seal .seal-label{color:rgba(255,255,255,.68);font-size:10px;letter-spacing:.13em;text-transform:uppercase;}
+  .seal .seal-val{color:#fff;font-size:31px;}
+  header .link-btn{color:#F7D584!important;border-bottom-color:rgba(247,213,132,.55)!important;}
+  header button.secondary{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.20);color:#fff;}
+  header button.secondary:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.28);}
+  #portfolioTabs{padding:4px;border-radius:14px;background:rgba(255,255,255,.62);border:1px solid rgba(20,33,61,.08);box-shadow:var(--shadow-sm);}
+  [data-theme="dark"] #portfolioTabs{background:rgba(17,27,46,.84);border-color:var(--line);}
+  .portfolio-tab{margin:0;padding:8px 13px;border:0;border-radius:10px;color:var(--ink-soft);transition:all .18s ease;}
+  .portfolio-tab:hover{background:rgba(20,33,61,.05);color:var(--ink);}
+  .portfolio-tab.active{background:var(--ink);color:var(--card);box-shadow:0 4px 12px rgba(20,33,61,.16);border-bottom:0;}
+  .page-nav{position:sticky;top:10px;z-index:15;display:flex;gap:6px;margin:0 0 22px;padding:5px;width:max-content;max-width:100%;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.84);backdrop-filter:blur(12px);box-shadow:var(--shadow-sm);}
+  [data-theme="dark"] .page-nav{background:rgba(17,27,46,.85);}
+  .page-nav-btn{padding:9px 15px;border:0!important;border-radius:10px;color:var(--ink-soft);font-size:15px;background:transparent;}
+  .page-nav-btn:hover{background:rgba(20,33,61,.06);color:var(--ink);}
+  .page-nav-btn.active{background:linear-gradient(135deg,var(--ink),#294875);color:#fff;border-bottom:0!important;box-shadow:0 5px 14px rgba(20,33,61,.16);}
+  .summary-grid{grid-template-columns:1.55fr repeat(3,1fr);gap:14px;margin:22px 0 28px;border:0;}
+  .card{position:relative;overflow:hidden;padding:20px 22px 20px;background:linear-gradient(180deg,var(--card),rgba(255,255,255,.96));border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-sm);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+  [data-theme="dark"] .card{background:linear-gradient(180deg,var(--card),#0E1829);}
+  .card::after{content:"";position:absolute;right:-34px;bottom:-36px;width:110px;height:110px;border-radius:50%;background:rgba(198,146,46,.10);}
+  .card:not(:first-child){padding-left:22px;border-left:1px solid var(--line);}
+  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:#CBD7E6;}
+  .card .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;}
+  .card .value{font-size:28px;margin-top:7px;color:var(--ink);position:relative;z-index:1;}
+  .card:first-child .value{font-size:40px;}
+  .panel{padding:24px 24px 26px;margin-bottom:22px;background:rgba(255,255,255,.78);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-sm);backdrop-filter:blur(5px);}
+  [data-theme="dark"] .panel{background:rgba(17,27,46,.86);}
+  .panel h2{font-size:25px;margin:0 0 18px;align-items:flex-end;}
+  .panel h2::before{content:"";width:5px;height:24px;border-radius:8px;background:linear-gradient(180deg,var(--gold),#E9C56A);display:inline-block;margin-right:11px;vertical-align:-3px;}
+  .panel h2 small{font-size:12px;max-width:62ch;}
+  .form-grid{gap:14px;}
+  .field{gap:7px;}
+  .field label{font-weight:600;color:var(--ink-soft);}
+  input,select,textarea{font-size:14px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--card);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.35);}
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(198,146,46,.12);}
+  textarea{min-height:120px;resize:vertical;}
+  button{border:0;background:linear-gradient(135deg,#182A4C,#294875);color:#fff;padding:10px 15px;border-radius:11px;box-shadow:0 6px 14px rgba(20,33,61,.14);transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;}
+  button:hover{opacity:1;transform:translateY(-1px);box-shadow:0 9px 20px rgba(20,33,61,.18);filter:none;}
+  button:active{transform:translateY(0);}
+  button.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none;}
+  button.secondary:hover{background:var(--paper-deep);border-color:#C9D6E5;}
+  button.link-btn{background:none!important;border:0!important;color:var(--gold-ink);padding:3px 0;box-shadow:none;text-decoration:none;}
+  button.link-btn:hover{transform:none;opacity:.78;box-shadow:none;}
+  button.danger-link{background:none!important;border:0!important;color:var(--rust);padding:3px 0;box-shadow:none;}
+  .hint{font-size:12.5px;}
+  .search-results{background:var(--card);border:1px solid var(--line);border-radius:12px;top:calc(100% + 6px);box-shadow:var(--shadow-md);overflow:hidden;}
+  .search-results div{padding:11px 12px;border-bottom:1px solid var(--line-soft);}
+  .search-results div:hover{background:var(--paper-deep);}
+  .table-scroll{overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:inset 0 1px 0 rgba(255,255,255,.4);}
+  table{font-size:13.5px;}
+  th{padding:12px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--paper-deep),var(--card));font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;white-space:nowrap;}
+  td{padding:12px;border-bottom:1px solid var(--line-soft);}
+  tbody tr{transition:background .16s ease;}
+  tbody tr:hover{background:rgba(43,84,124,.045);}
+  .fund-name{font-weight:700;}
+  .fund-code{font-size:10.5px;}
+  .badge{border-radius:999px;padding:3px 9px;background:var(--paper-deep);border-color:var(--line);}
+  .empty-state{padding:42px 16px;border:1px dashed var(--line);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.45),transparent);}
+  .empty-state .big{font-size:22px;}
+  .showcase-grid{gap:12px;margin-top:18px;border-top:0;}
+  .showcase-card{padding:18px;border:1px solid var(--line)!important;border-radius:16px!important;background:linear-gradient(180deg,var(--card),var(--paper-deep));box-shadow:var(--shadow-sm);}
+  .showcase-card:not(:nth-child(4n+1)){padding-left:18px;border-left:1px solid var(--line)!important;}
+  .showcase-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+  .showcase-card .sc-title{font-size:18px;}
+  .showcase-card .sc-desc{font-size:13px;}
+  .onboarding-card{}
+  details.import-panel{background:transparent;}
+  details.import-panel summary{padding:4px 0;font-size:14px;color:var(--ink);font-weight:700;}
+  details.import-panel[open] summary{margin-bottom:12px;}
+  .chart-box{height:330px;padding:6px;}
+  #giscus-container{padding:8px;border:1px solid var(--line);border-radius:16px;background:var(--card);min-height:80px;}
+  .toast{right:24px;bottom:24px;padding:13px 16px;border-radius:13px;background:#14213D;color:#fff;box-shadow:var(--shadow-lift);}
+  footer{opacity:.8;}
+  @media (max-width:900px){
+    .wrap{padding:0 18px;}
+    header.ledger-header{padding:26px 22px;border-radius:22px;}
+    header.ledger-header h1{font-size:40px;}
+    .summary-grid{grid-template-columns:1fr 1fr;}
+    .card:first-child{grid-column:1/-1;}
+  }
+  @media (max-width:720px){
+    header.ledger-header{align-items:flex-start;}
+    header.ledger-header>div:last-child{width:100%;}
+    header.ledger-header>div:last-child>div:last-child{display:none;}
+    header.ledger-header>div:last-child{display:flex;justify-content:flex-start;}
+    .page-nav{width:100%;justify-content:stretch;top:6px;}
+    .page-nav-btn{flex:1;}
+    .summary-grid{grid-template-columns:1fr 1fr;gap:10px;}
+    .card{padding:17px!important;}
+    .card:first-child{grid-column:1/-1;}
+    .card:first-child .value{font-size:34px;}
+    .panel{padding:18px;margin-bottom:16px;border-radius:16px;}
+    .panel h2{font-size:21px;}
+    .panel h2::before{width:4px;height:20px;}
+    .panel h2 small{width:100%;text-align:left;margin-left:15px;}
+    .chart-box{height:260px;}
+  }
+
 </style>
 </head>
 <body>
@@ -1686,7 +1855,10 @@
     const controller = new AbortController();
     const timer = setTimeout(()=>controller.abort(), ms);
     try{
-      return await fetch(url, {signal: controller.signal});
+      return await fetch(url, {
+        signal: controller.signal,
+        cache: 'no-store'
+      });
     } finally {
       clearTimeout(timer);
     }
@@ -1705,7 +1877,8 @@
   // all keep working completely unchanged.
   async function fetchTigzigScheme(code){
     try{
-      const res = await fetchWithTimeout('https://api.tigzig.com/mf/v1/nav?scheme=' + encodeURIComponent(code));
+      const url = 'https://api.tigzig.com/mf/v1/nav?scheme=' + encodeURIComponent(code) + '&_=' + Date.now();
+      const res = await fetchWithTimeout(url);
       if(!res.ok) throw new Error('bad response');
       return await res.json();
     }catch(e){
@@ -1724,7 +1897,8 @@
 
   async function searchSchemes(query){
     try{
-      const res = await fetchWithTimeout('https://api.tigzig.com/mf/v1/search?q=' + encodeURIComponent(query));
+      const url = 'https://api.tigzig.com/mf/v1/search?q=' + encodeURIComponent(query) + '&_=' + Date.now();
+      const res = await fetchWithTimeout(url);
       if(!res.ok) throw new Error('bad response');
       const json = await res.json();
       const results = Array.isArray(json.results) ? json.results : [];
@@ -1887,7 +2061,7 @@
         f.latestNavDate = ddmmyyyyToIso(detail.data[0].date);
         f.rolling = computeRollingReturns(detail.data);
         await save(); renderAll();
-        toast(`${f.name}: linked to code ${pickCode}, NAV updated to ₹${f.latestNav}`);
+        toast(`${f.name}: NAV updated to ₹${f.latestNav} (as of ${fmtDate(f.latestNavDate)})`);
       }else{
         toast('Could not reach NAV service — try again shortly');
       }
@@ -1927,7 +2101,7 @@
         f.latestNavDate = ddmmyyyyToIso(history[0].date);
         f.rolling = computeRollingReturns(history);
         await save(); renderAll();
-        toast(`${f.name}: NAV updated to ₹${f.latestNav}`);
+        toast(`${f.name}: NAV updated to ₹${f.latestNav} (as of ${fmtDate(f.latestNavDate)})`);
       }else{
         toast('Could not reach NAV service — try again or update manually via code field');
         e.target.textContent = 'Refresh NAV'; e.target.disabled = false;

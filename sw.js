@@ -1,5 +1,5 @@
 // Bump this whenever index.html/manifest/icons change, so old cached copies get replaced.
-const CACHE_NAME = 'fund-ledger-v1';
+const CACHE_NAME = 'fund-ledger-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -28,8 +28,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
 
-  // Page loads: try the network first (so you get the latest version), fall
-  // back to the cached shell if offline.
+  // Page loads: try the network first, then fall back to the cached shell offline.
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
@@ -43,8 +42,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else (icons, manifest, CDN scripts): cache-first, so the app
-  // still opens and works offline once it's been loaded at least once.
+  // Never cache the live NAV/search API. Always fetch fresh data.
+  const isTigzigApi = req.url.startsWith('https://api.tigzig.com/');
+  if (isTigzigApi) {
+    event.respondWith(fetch(req, { cache: 'no-store' }));
+    return;
+  }
+
+  // Cache everything else for offline use after first load.
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
